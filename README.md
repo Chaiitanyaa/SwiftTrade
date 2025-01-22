@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SwiftTrade
 
 SwiftTrade is a full-stack day trading application that allows users to manage their stock trading activities efficiently. The application supports a wide range of features, including account management, real-time stock price updates, and transaction auditing.
@@ -33,3 +34,6 @@ SwiftTrade is a full-stack day trading application that allows users to manage t
 1. Clone the repository:
    ```bash
    git
+=======
+# SwiftTrade
+>>>>>>> origin/main
