@@ -1,0 +1,9 @@
+# Enforce LF line endings in the repository
+* text=auto
+
+# Specific file types that should always have binary handling (no line endings converted)
+*.png binary
+*.jpg binary
+*.exe binary
+*.dll binary
+*.zip binary
