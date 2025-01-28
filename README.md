@@ -26,7 +26,7 @@ SwiftTrade is a full-stack day trading application that allows users to manage t
 
 - Docker compose
 
-### Instal & Run
+### Install & Run
 
 1. Clone the repository:
    ```bash
