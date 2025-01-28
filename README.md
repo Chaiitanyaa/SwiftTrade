@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SwiftTrade
 
 SwiftTrade is a full-stack day trading application that allows users to manage their stock trading activities efficiently. The application supports a wide range of features, including account management, real-time stock price updates, and transaction auditing.
@@ -18,22 +17,29 @@ SwiftTrade is a full-stack day trading application that allows users to manage t
 
 - **Front-End**: React.js
 - **Back-End**: Node.js with Express.js
-- **Database**: PostgreSQL or MongoDB
-- **Real-Time Updates**: WebSockets or polling
+- **Database**: MongoDB
+- **Real-Time Updates**: WebSockets
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js
-- npm or yarn
-- PostgreSQL or MongoDB
+- Docker compose
 
-### Installation
+### Instal & Run
 
 1. Clone the repository:
    ```bash
-   git
-=======
-# SwiftTrade
->>>>>>> origin/main
+   git clone https://github.com/Chaiitanyaa/SwiftTrade.git
+   ```
+
+2. Run the Docker Containers
+   ```bash
+   docker compose up --build
+   ```
+
+3. Load test data (Deletes all existing data)
+   ```bash
+   curl localhost:5000/api/loadTestData
+   ```
+
