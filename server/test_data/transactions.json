@@ -1,0 +1,42 @@
+[
+  {
+    "transaction_id": "TX001",
+    "stock_id": "GOOGL",
+    "seller_id": "U002",
+    "buyer_id": "U001",
+    "quantity": 10,
+    "price": 150,
+    "status": "COMPLETE",
+    "timestamp": "2025-01-01T10:00:00Z"
+  },
+  {
+    "transaction_id": "TX002",
+    "stock_id": "AAPL",
+    "seller_id": "U002",
+    "buyer_id": "U001",
+    "quantity": 5,
+    "price": 200,
+    "status": "COMPLETE",
+    "timestamp": "2025-01-02T12:30:00Z"
+  },
+  {
+    "transaction_id": "TX003",
+    "stock_id": "MSFT",
+    "seller_id": "U003",
+    "buyer_id": "U002",
+    "quantity": 8,
+    "price": 280,
+    "status": "COMPLETE",
+    "timestamp": "2025-01-03T15:00:00Z"
+  },
+  {
+    "transaction_id": "TX004",
+    "stock_id": "TSLA",
+    "seller_id": "U001",
+    "buyer_id": "U003",
+    "quantity": 2,
+    "price": 900,
+    "status": "COMPLETE",
+    "timestamp": "2025-01-05T08:20:00Z"
+  }
+]

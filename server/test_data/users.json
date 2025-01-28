@@ -1,0 +1,31 @@
+[
+  {
+    "user_id": "U001",
+    "username": "john_doe",
+    "email": "john@example.com",
+    "password": "hashed_password_123",
+    "portfolio": [
+      { "stock_id": "GOOGL", "quantity": 10, "average_price": 150 },
+      { "stock_id": "AAPL", "quantity": 5, "average_price": 200 }
+    ]
+  },
+  {
+    "user_id": "U002",
+    "username": "jane_smith",
+    "email": "jane@example.com",
+    "password": "hashed_password_456",
+    "portfolio": [
+      { "stock_id": "MSFT", "quantity": 8, "average_price": 280 }
+    ]
+  },
+  {
+    "user_id": "U003",
+    "username": "bob_marley",
+    "email": "bob@example.com",
+    "password": "hashed_password_789",
+    "portfolio": [
+      { "stock_id": "TSLA", "quantity": 3, "average_price": 900 },
+      { "stock_id": "AAPL", "quantity": 2, "average_price": 220 }
+    ]
+  }
+]

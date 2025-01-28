@@ -1,0 +1,28 @@
+[
+  {
+    "wallet_id": "W001",
+    "user_id": "U001",
+    "balance": 5000,
+    "transactions": [
+      { "transaction_id": "TX001", "amount": 1000, "timestamp": "2025-01-01T10:00:00Z" },
+      { "transaction_id": "TX002", "amount": -500, "timestamp": "2025-01-02T12:30:00Z" }
+    ]
+  },
+  {
+    "wallet_id": "W002",
+    "user_id": "U002",
+    "balance": 10000,
+    "transactions": [
+      { "transaction_id": "TX003", "amount": 3000, "timestamp": "2025-01-03T15:00:00Z" }
+    ]
+  },
+  {
+    "wallet_id": "W003",
+    "user_id": "U003",
+    "balance": 7500,
+    "transactions": [
+      { "transaction_id": "TX004", "amount": 2000, "timestamp": "2025-01-05T08:20:00Z" },
+      { "transaction_id": "TX005", "amount": -1000, "timestamp": "2025-01-06T11:45:00Z" }
+    ]
+  }
+]
