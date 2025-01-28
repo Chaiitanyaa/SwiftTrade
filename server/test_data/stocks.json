@@ -2,25 +2,25 @@
   {
     "stock_id": "GOOGL",
     "stock_name": "Google",
-    "current_price": 140,
+    "price": 140,
     "availability": 1000
   },
   {
     "stock_id": "AAPL",
     "stock_name": "Apple",
-    "current_price": 135,
+    "price": 135,
     "availability": 800
   },
   {
     "stock_id": "MSFT",
     "stock_name": "Microsoft",
-    "current_price": 280,
+    "price": 280,
     "availability": 1200
   },
   {
     "stock_id": "TSLA",
     "stock_name": "Tesla",
-    "current_price": 900,
+    "price": 900,
     "availability": 500
   }
 ]

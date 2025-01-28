@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo
+    networks:
+      - swifttrade
+    volumes:
+      - db:/data/db
+
+  server:
+    env_file:
+      - ./server/.env
+    ports:
+      - "5000:5000"
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    networks:
+      - swifttrade
+
+volumes:
+  db:
+
+networks:
+  swifttrade:
+    driver: bridge
+    
