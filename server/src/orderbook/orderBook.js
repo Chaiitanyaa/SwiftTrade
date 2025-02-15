@@ -1,56 +1,36 @@
-const { v4: uuidv4 } = require("uuid");
+// src/orderbook/orderBook.js
 
 class OrderBook {
     constructor() {
-        this.orders = {}; // HashMap { stock_id: { buyOrders: [], sellOrders: [] } }
+        this.buyOrders = []; // Highest price first
+        this.sellOrders = []; // Lowest price first
     }
 
-    ensureStock(stock_id) {
-        if (!this.orders[stock_id]) {
-            this.orders[stock_id] = { buyOrders: [], sellOrders: [] };
-        }
-    }
-
-    // ✅ Add order to order book (Buy/Sell)
     addOrder(order) {
-        this.ensureStock(order.stock_id);
-
-        order.order_id = uuidv4(); // Assign unique ID
-        order.timestamp = Date.now(); // Assign timestamp
-
         if (order.is_buy) {
-            this.orders[order.stock_id].buyOrders.push(order);
-            this.orders[order.stock_id].buyOrders.sort((a, b) => b.price - a.price || a.timestamp - b.timestamp);
+            this.buyOrders.push(order);
+            this.buyOrders.sort((a, b) => b.price - a.price); // Sort descending
         } else {
-            this.orders[order.stock_id].sellOrders.push(order);
-            this.orders[order.stock_id].sellOrders.sort((a, b) => a.price - b.price || a.timestamp - b.timestamp);
+            this.sellOrders.push(order);
+            this.sellOrders.sort((a, b) => a.price - b.price); // Sort ascending
         }
     }
 
-    // ✅ Get Best Buy/Sell Order
-    getBestBuyOrder(stock_id) {
-        this.ensureStock(stock_id);
-        return this.orders[stock_id].buyOrders.length ? this.orders[stock_id].buyOrders[0] : null;
+    getBestBuy() {
+        return this.buyOrders.length > 0 ? this.buyOrders[0] : null;
     }
 
-    getBestSellOrder(stock_id) {
-        this.ensureStock(stock_id);
-        return this.orders[stock_id].sellOrders.length ? this.orders[stock_id].sellOrders[0] : null;
+    getBestSell() {
+        return this.sellOrders.length > 0 ? this.sellOrders[0] : null;
     }
 
-    // ✅ Remove completed order
-    removeOrder(stock_id, order_id, is_buy) {
-        this.ensureStock(stock_id);
-        this.orders[stock_id][is_buy ? "buyOrders" : "sellOrders"] = 
-            this.orders[stock_id][is_buy ? "buyOrders" : "sellOrders"]
-                .filter(order => order.order_id !== order_id);
-    }
-
-    // ✅ Get all orders for debugging
-    getOrders(stock_id) {
-        this.ensureStock(stock_id);
-        return this.orders[stock_id];
+    removeOrder(orderId, isBuy) {
+        if (isBuy) {
+            this.buyOrders = this.buyOrders.filter(order => order.id !== orderId);
+        } else {
+            this.sellOrders = this.sellOrders.filter(order => order.id !== orderId);
+        }
     }
 }
 
-module.exports = new OrderBook();
+module.exports = OrderBook;
