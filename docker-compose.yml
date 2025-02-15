@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./server  # Build from the `/server/` directory
+      dockerfile: Dockerfile
+    container_name: trading_backend
+    restart: always
+    ports:
+      - "3001:3001"  # Map port 3001
+    depends_on:
+      - mongo
+    working_dir: /app/src  # Ensures the application runs from `src/`
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001  # Port for Express.js
+    networks:
+      - trading_network
+
+  mongo:
+    image: mongo:latest
+    container_name: trading_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      - trading_network
+    volumes:
+      - mongo_data:/data/db
+
+networks:
+  trading_network:
+
+volumes:
+  mongo_data:
