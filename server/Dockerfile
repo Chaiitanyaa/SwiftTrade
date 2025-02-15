@@ -1,26 +1,16 @@
-# Use Node.js as the base image
-FROM node:18
+FROM node:20-alpine
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json to install dependencies first
-COPY package*.json ./
+COPY package*.json .
 
-# Install dependencies without bcrypt
-RUN npm install --omit=dev
+RUN npm install
 
-# Copy everything from `server/` into the container
-COPY . .
+RUN mkdir src
 
-# Rebuild bcrypt inside the container
-RUN npm rebuild bcrypt --build-from-source
+COPY src/ src/
+# COPY test_data/ test_data/
 
-# Change working directory to `src/`
-WORKDIR /app/src
+EXPOSE 5000
 
-# Expose the application port
-EXPOSE 3001
-
-# Start the server
-CMD ["node", "server.js"]
+CMD [ "npm", "start"]
