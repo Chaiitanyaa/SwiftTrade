@@ -9,8 +9,6 @@ const { v4: uuidv4 } = require("uuid");
 const User = require("../models/User");
 
 
-
-
 // @desc Get all user portfolios
 router.get("/", async (req, res) => {
     try {
@@ -34,7 +32,31 @@ router.post("/", async (req, res) => {
 
 // Get user's stock portfolio
 router.get("/getStockPortfolio", authMiddleware, async (req, res) => {
-    
+    try {
+        const user_id = req.user.id;
+        const portfolio = await UserPortfolio.find({ userid: user_id });
+
+        if (!portfolio || portfolio.length === 0) {
+            return res.json({ success: true, data: [] });
+        }
+
+        // 🔹 Manually fetch stock details since `.populate()` does not work on Strings
+        const stockPortfolio = await Promise.all(
+            portfolio.map(async (entry) => {
+                const stock = await Stock.findOne({ stock_id: entry.stock_id }); // 🔹 FIXED: Lookup stock manually
+                return stock ? {
+                    stock_id: entry.stock_id,
+                    stock_name: stock.stock_name,
+                    quantity_owned: entry.quantity_owned,
+                    updated_at: new Date().toISOString()
+                } : null;
+            })
+        );
+
+        res.json({ success: true, data: stockPortfolio.filter(item => item !== null) });
+    } catch (err) {
+        res.status(500).json({ success: false, data: { error: err.message } });
+    }
 });
 
 
