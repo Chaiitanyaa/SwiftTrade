@@ -82,40 +82,6 @@ router.post("/addStockToUser", authenticateToken, async (req, res) => {
     }
 });
 
-// ✅ Get Stock Prices from Order Book
-router.get("/getStockPrices", authenticateToken, async (req, res) => {
-    try {
-        console.log("🔍 Fetching stock prices from Order Book...");
-
-        // ✅ Get the order book (same as `getOrderBook`)
-        const orderBook = engine.getOrderBook();
-        const sellOrders = orderBook.sellOrders;
-
-        if (!sellOrders || sellOrders.length === 0) {
-            console.log("⚠️ No sell orders found.");
-            return res.json({ success: true, data: [] });
-        }
-
-        // 🔹 Extract lowest price for each stock
-        const stockPrices = {};
-        sellOrders.forEach(order => {
-            if (!stockPrices[order.stock_id] || order.price < stockPrices[order.stock_id].current_price) {
-                stockPrices[order.stock_id] = {
-                    stock_id: order.stock_id,
-                    stock_name: "Unknown", // Modify if needed
-                    current_price: order.price
-                };
-            }
-        });
-
-        return res.json({ success: true, data: Object.values(stockPrices) });
-
-    } catch (error) {
-        console.error("❌ Error fetching stock prices:", error);
-        return res.status(500).json({ success: false, data: { error: error.message } });
-    }
-});
-
 
 
 
