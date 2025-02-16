@@ -6,23 +6,115 @@ const Transaction = require("../models/Transaction");
 const { v4: uuidv4 } = require("uuid");
 const Stock = require("../models/Stock"); // ✅ Import Stock model
 const router = express.Router();
+const Wallet = require("../models/Wallet");
+const UserPortfolio = require("../models/UserPortfolio");
+const User = require("../models/User");
 const engine = new MatchingEngine();
 
 
-// ✅ API to Place a Sell Order (Extract user ID from JWT)
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     console.log("✅ Received order:", req.body);
 
-    const user_id = req.user.id; // Extract user ID from JWT token
+    const user_id = req.user.id; // Extracted from JWT token
     const { stock_id, is_buy, order_type, quantity, price } = req.body;
 
-    if (!stock_id || typeof is_buy !== "boolean" || !order_type || !quantity || !price) {
+    // ✅ Check for required fields (Price is NOT required for MARKET buy orders)
+    if (!stock_id || typeof is_buy !== "boolean" || !order_type || !quantity) {
         console.error("❌ Missing required fields:", { stock_id, user_id, is_buy, order_type, quantity, price });
         return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // ✅ Ensure SELL orders always have a price
+    if (!is_buy && (price === undefined || price <= 0)) {
+        console.error("❌ Sell orders require a valid price.");
+        return res.status(400).json({ error: "Sell orders must have a valid price." });
+    }
+
     try {
-        // 🔹 Log the order into the Transactions DB
+        if (is_buy && order_type === "MARKET") {
+            console.log("📌 Processing MARKET Buy Order... Looking for matching sell orders");
+
+            // ✅ Look for sell orders in the order book for this stock
+            const sellOrders = engine.orderBook.sellOrders.filter(order => order.stock_id === stock_id);
+
+            if (!sellOrders.length) {
+                console.warn("⚠️ No sell orders available for this stock.");
+                return res.status(400).json({ success: false, data: { error: "No available sell orders for this stock." } });
+            }
+
+            // ✅ Sort sell orders by lowest price
+            sellOrders.sort((a, b) => a.price - b.price);
+            let remainingQuantity = quantity;
+            let totalCost = 0;
+
+            // ✅ Calculate total cost of the order
+            for (const sellOrder of sellOrders) {
+                if (remainingQuantity <= 0) break;
+
+                const matchQuantity = Math.min(remainingQuantity, sellOrder.quantity);
+                totalCost += matchQuantity * sellOrder.price;
+                remainingQuantity -= matchQuantity;
+            }
+
+            // ✅ Fix User Lookup (Ensure correct field is used)
+            let user = await User.findOne({ user_id: user_id });
+
+            if (!user) {
+                console.warn(`⚠️ User not found with user_id: ${user_id}. Trying with _id...`);
+                user = await User.findById(user_id);
+            }
+
+            if (!user) {
+                console.error(`❌ User still not found: ${user_id}`);
+                return res.status(400).json({ success: false, data: { error: "User not found" } });
+            }
+
+            console.log(`✅ User found: ${user.user_name} (Balance: ${user.wallet_balance})`);
+
+            // ✅ Check if the user has enough balance
+            if (user.wallet_balance < totalCost) {
+                console.error("❌ Insufficient funds.");
+                return res.status(400).json({ success: false, data: { error: "Insufficient funds in wallet." } });
+            }
+
+            // ✅ Deduct total cost from user's wallet balance
+            user.wallet_balance -= totalCost;
+            await user.save();
+            console.log(`✅ Wallet Updated: New Balance: ${user.wallet_balance}`);
+
+            // ✅ Deduct quantity from sell orders
+            remainingQuantity = quantity;
+            for (const sellOrder of sellOrders) {
+                if (remainingQuantity <= 0) break;
+
+                const matchQuantity = Math.min(remainingQuantity, sellOrder.quantity);
+                remainingQuantity -= matchQuantity;
+
+                // ✅ Deduct quantity from the sell order
+                sellOrder.quantity -= matchQuantity;
+                console.log(`✅ Deducted ${matchQuantity} from sell order ${sellOrder.id}`);
+
+                if (sellOrder.quantity === 0) {
+                    console.log(`✅ Removing sell order ${sellOrder.id} as quantity is now zero`);
+                    engine.orderBook.sellOrders = engine.orderBook.sellOrders.filter(order => order.id !== sellOrder.id);
+                }
+            }
+
+            // ✅ Update Buyer's Portfolio
+            let buyerPortfolio = await UserPortfolio.findOne({ userid: user_id, stock_id });
+            if (!buyerPortfolio) {
+                buyerPortfolio = new UserPortfolio({ userid: user_id, stock_id, quantity_owned: quantity });
+            } else {
+                buyerPortfolio.quantity_owned += quantity;
+            }
+            await buyerPortfolio.save();
+            console.log(`✅ Buyer's Portfolio Updated: ${quantity} stocks added.`);
+
+            return res.json({ success: true, data: null }); // ✅ Required Response Format
+        }
+
+        // 🔍 Log the SELL order into the Transactions DB
+        console.log("📌 Processing SELL Order...");
         const newTransaction = new Transaction({
             stock_tx_id: uuidv4(), // Generate unique ID
             stock_id,
@@ -31,7 +123,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             parent_stock_tx_id: null,
             is_buy,
             order_type,
-            stock_price: price,
+            stock_price: is_buy ? 0 : price, // ✅ Set price to 0 for MARKET buy orders
             quantity,
             time_stamp: new Date(),
             buyer_id: is_buy ? user_id : null,
@@ -41,8 +133,8 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         await newTransaction.save();
         console.log("📌 Order logged in Transactions DB:", newTransaction);
 
-        // 🔹 Send order to the Matching Engine
-        const order = { id: newTransaction.stock_tx_id, stock_id, user_id, is_buy, order_type, quantity, price };
+        // 🔄 Send order to the Matching Engine
+        const order = { id: newTransaction.stock_tx_id, stock_id, user_id, is_buy, order_type, quantity, price: is_buy ? 0 : price };
         await engine.placeOrder(order);
 
         return res.json({ success: true, data: null }); // ✅ Required Response Format
@@ -51,6 +143,10 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
+
 
 
 router.post("/cancelOrder", authMiddleware, async (req, res) => {
