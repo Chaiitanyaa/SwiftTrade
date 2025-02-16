@@ -52,8 +52,6 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 });
 
 
-
-// ✅ API to Cancel an Order
 router.post("/cancelOrder", authMiddleware, async (req, res) => {
     const user_id = req.user.id; // Extract user ID from JWT token
     const { order_id, is_buy } = req.body;

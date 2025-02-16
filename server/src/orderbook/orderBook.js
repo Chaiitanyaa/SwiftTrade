@@ -1,5 +1,3 @@
-// src/orderbook/orderBook.js
-
 class OrderBook {
     constructor() {
         this.buyOrders = []; // Highest price first
