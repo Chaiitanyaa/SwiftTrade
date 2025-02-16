@@ -7,6 +7,9 @@ const router = express.Router();
 const authenticateToken = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
 const mongoose = require("mongoose");
+const MatchingEngine = require("../matchingEngine/matchingEngine");
+
+
 
 // Fetch all stocks
 router.get("/", async (req, res) => {
@@ -79,60 +82,43 @@ router.post("/addStockToUser", authenticateToken, async (req, res) => {
     }
 });
 
-
-
+// ✅ Get Stock Prices from Order Book
 router.get("/getStockPrices", authenticateToken, async (req, res) => {
     try {
-        const user_id = req.user.id.toString(); // ✅ Extract user ID from JWT
+        console.log("🔍 Fetching stock prices from Order Book...");
 
-        console.log(`🔍 Fetching available stocks for user: ${user_id}`);
+        // ✅ Get the order book (same as `getOrderBook`)
+        const orderBook = engine.getOrderBook();
+        const sellOrders = orderBook.sellOrders;
 
-        // 🔹 Find stock IDs where this user has active sell orders
-        const userSellOrders = await Transaction.find({ seller_id: user_id }).distinct("stock_id");
-
-        console.log(`🛑 User is selling stocks: ${JSON.stringify(userSellOrders)}`);
-
-        // 🔹 Find all stocks that have sell orders from *other* users
-        const stocksWithOtherSellers = await Transaction.find({
-            is_buy: false,
-            stock_id: { $in: userSellOrders }, // Consider stocks user sells
-            seller_id: { $ne: user_id } // Exclude user’s own sell orders
-        }).distinct("stock_id");
-
-        console.log(`📌 Stocks available from other users: ${JSON.stringify(stocksWithOtherSellers)}`);
-
-        // 🔹 Combine stocks that are not sold by the user alone
-        const validStockIds = [...new Set([...stocksWithOtherSellers])];
-
-        // 🔹 Fetch stock details for the available stock IDs
-        const availableStocks = await Stock.find({ stock_id: { $in: validStockIds } });
-
-        if (!availableStocks || availableStocks.length === 0) {
-            console.log("⚠️ No available stocks found.");
+        if (!sellOrders || sellOrders.length === 0) {
+            console.log("⚠️ No sell orders found.");
             return res.json({ success: true, data: [] });
         }
 
-        // 🔹 Get prices from the Order Book (Lowest available sell price)
-        const formattedStocks = availableStocks.map(stock => {
-            const bestSellOrder = engine.orderBook.sellOrders
-                .filter(order => order.stock_id === stock.stock_id)
-                .sort((a, b) => a.price - b.price)[0]; // Lowest price
-
-            return {
-                stock_id: stock.stock_id,
-                stock_name: stock.stock_name,
-                stock_price: bestSellOrder ? bestSellOrder.price : null // ✅ Get price from order book
-            };
+        // 🔹 Extract lowest price for each stock
+        const stockPrices = {};
+        sellOrders.forEach(order => {
+            if (!stockPrices[order.stock_id] || order.price < stockPrices[order.stock_id].current_price) {
+                stockPrices[order.stock_id] = {
+                    stock_id: order.stock_id,
+                    stock_name: "Unknown", // Modify if needed
+                    current_price: order.price
+                };
+            }
         });
 
-        console.log(`✅ Available stocks: ${formattedStocks.length}`);
-
-        return res.json({ success: true, data: formattedStocks });
+        return res.json({ success: true, data: Object.values(stockPrices) });
 
     } catch (error) {
         console.error("❌ Error fetching stock prices:", error);
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
+
+
 
 module.exports = router;

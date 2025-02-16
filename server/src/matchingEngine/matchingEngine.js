@@ -115,6 +115,13 @@ class MatchingEngine {
 
         return { status: "Order cancelled", order };
     }
+
+	// ✅ Add this function to return the full order book
+    getOrderBook() {
+        return this.orderBook;
+    }
 }
+
+const engineInstance = new MatchingEngine(); // ✅ Singleton instance
 
 module.exports = MatchingEngine;

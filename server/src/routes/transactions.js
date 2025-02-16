@@ -4,9 +4,10 @@ const authMiddleware = require("../middleware/authMiddleware");
 const MatchingEngine = require("../matchingEngine/matchingEngine");
 const Transaction = require("../models/Transaction");
 const { v4: uuidv4 } = require("uuid");
-
+const Stock = require("../models/Stock"); // ✅ Import Stock model
 const router = express.Router();
 const engine = new MatchingEngine();
+
 
 // ✅ API to Place a Sell Order (Extract user ID from JWT)
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
@@ -131,6 +132,53 @@ router.get("/getStockTransactions", authMiddleware, async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
+router.get("/getStockPrices", async (req, res) => {
+    try {
+        console.log("🔍 Fetching stock prices from Order Book...");
+
+        // ✅ Get order book data
+        const buyOrders = engine.orderBook.buyOrders;
+        const sellOrders = engine.orderBook.sellOrders;
+
+        if (!sellOrders || sellOrders.length === 0) {
+            console.log("⚠️ No sell orders found.");
+            return res.json({ success: true, data: [] });
+        }
+
+        // 🔹 Create an array of unique stock_ids from sell orders
+        const stockIds = [...new Set(sellOrders.map(order => order.stock_id))];
+
+        // 🔹 Fetch stock names from MongoDB
+        const stockData = await Stock.find({ stock_id: { $in: stockIds } });
+        const stockMap = stockData.reduce((map, stock) => {
+            map[stock.stock_id] = stock.stock_name;
+            return map;
+        }, {});
+
+        // 🔹 Find the lowest price for each stock and attach the stock name
+        const stockPrices = {};
+        sellOrders.forEach(order => {
+            if (!stockPrices[order.stock_id] || order.price < stockPrices[order.stock_id].current_price) {
+                stockPrices[order.stock_id] = {
+                    stock_id: order.stock_id,
+                    stock_name: stockMap[order.stock_id] || "Unknown", // ✅ Get stock_name from DB
+                    current_price: order.price
+                };
+            }
+        });
+
+        return res.json({ success: true, data: Object.values(stockPrices) });
+
+    } catch (error) {
+        console.error("❌ Error fetching stock prices:", error);
+        return res.status(500).json({ success: false, data: { error: error.message } });
+    }
+});
+
+
 
 
 module.exports = router;
