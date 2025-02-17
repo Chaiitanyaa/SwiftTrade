@@ -98,7 +98,25 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                     console.log(`✅ Removing sell order ${sellOrder.id} as quantity is now zero`);
                     engine.orderBook.sellOrders = engine.orderBook.sellOrders.filter(order => order.id !== sellOrder.id);
                 }
+				
+				const selleruser = sellOrder.user_id;
+				
+				// 🔹 Find the user in the database
+				const sellerbal = await User.findOne({ _id: selleruser });
+
+				if (!sellerbal) {
+					console.error("❌ User not found:", selleruser);
+					return res.status(404).json({ success: false, data: { error: "User not found" } });
+				}
+
+				// 🔹 Increase wallet balance 
+				sellerbal.wallet_balance += totalCost;
+				await sellerbal.save();
             }
+			
+			
+			
+			
 
             // ✅ Update Buyer's Portfolio
             let buyerPortfolio = await UserPortfolio.findOne({ userid: user_id, stock_id });
