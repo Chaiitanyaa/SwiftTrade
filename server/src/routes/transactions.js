@@ -176,6 +176,7 @@ router.get("/getOrderBook", async (req, res) => {
                 })),
                 sell_orders: sellOrders.map(order => ({
                     stock_id: order.stock_id,
+					user_id: order.user_id,
                     price: order.price,
                     quantity: order.quantity
                 }))

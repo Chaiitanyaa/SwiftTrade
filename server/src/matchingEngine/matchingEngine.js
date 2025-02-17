@@ -19,6 +19,7 @@ class MatchingEngine {
                 this.tradeHistory.push({
                     buyOrderId: order.id,
                     sellOrderId: bestSell.id,
+					sellerUserId: bestSell.user_id,
                     price: bestSell.price,
                     quantity: matchQuantity
                 });
