@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User");
+const Transaction = require("../models/Transaction");
 
 // ✅ Add Money to Wallet
 router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
@@ -68,15 +69,18 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
 
 router.get("/getWalletTransactions", authMiddleware, async (req, res) => {
     try {
-        const user_id = req.user.id;
+        const user_id = req.user.id; // Get user ID from JWT token
         console.log(`🔍 Fetching wallet transactions for user: ${user_id}`);
 
-        const walletTransactions = await Wallet.find({ user_id }).sort({ timestamp: -1 });
+        // 🔹 Find wallet transactions for the user
+        const walletTransactions = await Wallet.find({ user_id });
 
-        if (!walletTransactions.length) {
+        if (!walletTransactions || walletTransactions.length === 0) {
+            console.log("⚠️ No wallet transactions found for user.");
             return res.json({ success: true, data: [] });
         }
 
+        // 🔹 Format the response correctly
         const formattedTransactions = walletTransactions.map(tx => ({
             wallet_tx_id: tx.wallet_tx_id,
             stock_tx_id: tx.stock_tx_id,
@@ -85,12 +89,19 @@ router.get("/getWalletTransactions", authMiddleware, async (req, res) => {
             time_stamp: tx.timestamp
         }));
 
+        console.log(`✅ Wallet Transactions found: ${formattedTransactions.length}`);
+
         return res.json({ success: true, data: formattedTransactions });
+
     } catch (error) {
         console.error("❌ Error fetching wallet transactions:", error);
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
+
    
 
 

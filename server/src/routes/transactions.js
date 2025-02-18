@@ -16,6 +16,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     console.log("✅ Received order:", req.body);
 
     const user_id = req.user.id; // Extract user ID from JWT token
+	const current_user_id = user_id;
     let { stock_id, is_buy, order_type, quantity, price } = req.body;
 
     if (!stock_id || typeof is_buy !== "boolean" || !order_type || !quantity) {
@@ -35,6 +36,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         }
 
         let allTransactions = [];
+		let initialSellTransaction = null; // ✅ Declare globally
 
         // --- SELL ORDER Handling (Deduct stocks from UserPortfolio) ---
         if (!is_buy) {
@@ -76,20 +78,8 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             console.log("📌 Initial Sell Order logged in Transactions DB:", initialSellTransaction);
 			
 			
-			 // --- Log Credit Transaction in Wallet ---
-            const walletTransaction = new Wallet({
-                wallet_tx_id: uuidv4(),
-                user_id,
-                stock_tx_id: initialSellTransaction.stock_tx_id,
-                is_debit: false, // Credit transaction for seller
-                amount: price * quantity,
-                timestamp: new Date(),
-            });
-
-            await walletTransaction.save();
-            console.log(`💰 Wallet Transaction Logged (Credit) for seller:`, walletTransaction);
 			
-
+		
             // --- Send Sell Order to the Matching Engine ---
             const sellOrder = {
                 id: initialSellTransaction.stock_tx_id,
@@ -143,12 +133,11 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 				
 				
 				
-
                 // --- Create BUY Transaction ---
                 const buyTransaction = new Transaction({
                     stock_tx_id: uuidv4(),
                     stock_id,
-                    wallet_tx_id: null,
+                    wallet_tx_id: uuidv4(),
                     order_status: "COMPLETED",
                     parent_stock_tx_id: sellOrder.id,
                     is_buy: true,
@@ -159,23 +148,65 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                     buyer_id: user_id,
                     seller_id: sellOrder.user_id,
                 });
+				
+				await buyTransaction.save();
+				allTransactions.push(buyTransaction);
+				
+				// --- Create SELL Transaction (Exact Copy but is_buy = false) ---
+				const sellTransaction = new Transaction({
+					stock_tx_id: uuidv4(),  // ✅ Unique ID
+					stock_id,
+					wallet_tx_id: uuidv4(),
+					order_status: "COMPLETED",
+					parent_stock_tx_id: buyTransaction.parent_stock_tx_id,  // ✅ Keep the same parent_stock_tx_id
+					is_buy: false,  // ✅ Seller transaction (EXACT COPY)
+					order_type: order_type,
+					stock_price: matchPrice,
+					quantity: matchQuantity,
+					time_stamp: new Date(),
+					buyer_id: user_id,  // ✅ Keep everything the same
+					seller_id: sellOrder.user_id,
+				});
+				
 
-                await buyTransaction.save();
-                allTransactions.push(buyTransaction);
+
+                
+				await sellTransaction.save();
+				
+                
+				
+				
+				
+				
+				const sellerWalletTransaction = new Wallet({
+				wallet_tx_id: sellTransaction.wallet_tx_id,
+				user_id: buyTransaction.seller_id, // Ensure we log for the seller
+				stock_tx_id: sellTransaction.stock_tx_id,
+				is_debit: false, // Credit transaction for the seller
+				amount: matchQuantity * matchPrice,
+				timestamp: new Date(),
+				});
+
+				await sellerWalletTransaction.save(); // ✅ Ensure transaction is saved
+				console.log(`💰 Wallet Transaction Logged (Credit) for seller:`, sellerWalletTransaction);
 				
 				
 				// --- Log Debit Transaction in Wallet ---
-                const walletTransaction = new Wallet({
-                    wallet_tx_id: uuidv4(),
-                    user_id,
-                    stock_tx_id: buyTransaction.stock_tx_id,
-                    is_debit: true, // Debit transaction for buyer
-                    amount: matchQuantity * matchPrice,
-                    timestamp: new Date(),
-                });
+				const walletTransaction = new Wallet({
+						wallet_tx_id: buyTransaction.wallet_tx_id,
+						user_id: current_user_id,
+						stock_tx_id: buyTransaction.stock_tx_id,
+						is_debit: true, // Debit transaction for buyer
+						amount: matchQuantity * matchPrice,
+						timestamp: new Date(),
+					});
 
-                await walletTransaction.save();
-                console.log(`💰 Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
+				await walletTransaction.save();
+				console.log(`💰 Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
+				
+				
+				
+			
 
                 // --- Seller Updates ---
                 const sellerUser = await User.findById(sellOrder.user_id);
@@ -212,6 +243,9 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             }
             await buyerPortfolio.save();
             console.log(`✅ Buyer's Portfolio Updated: ${quantity} stocks added.`);
+			
+		
+			
         }
 
         return res.json({ success: true, data: allTransactions });
@@ -267,26 +301,33 @@ router.get("/getOrderBook", async (req, res) => {
 
 router.get("/getStockTransactions", authMiddleware, async (req, res) => {
     try {
-        const user_id = req.user.id; // Extract user ID from JWT token
-
+        const user_id = req.user.id; // Get user ID from JWT token
         console.log(`🔍 Fetching transactions for user: ${user_id}`);
 
-        // 🔹 Find transactions where the user is the buyer or seller
+        // 🔹 Find transactions where the user is either the buyer or seller
         const transactions = await Transaction.find({
             $or: [{ buyer_id: user_id }, { seller_id: user_id }]
         });
-
-        console.log(`📝 MongoDB Query Result: ${JSON.stringify(transactions, null, 2)}`);
 
         if (!transactions || transactions.length === 0) {
             console.log("⚠️ No transactions found for user.");
             return res.json({ success: true, data: [] });
         }
 
-        // 🔹 Format response
-        const formattedTransactions = transactions.map(tx => ({
-            stock_tx_id: tx.stock_tx_id,
-            parent_stock_tx_id: tx.parent_stock_tx_id || null,
+        // 🔹 Filter transactions based on user role
+        const filteredTransactions = transactions.filter(tx => {
+            if (tx.buyer_id === user_id && tx.is_buy === true) {
+                return true;  // ✅ Buyer should only see buy transactions
+            } else if (tx.seller_id === user_id && tx.is_buy === false) {
+                return true;  // ✅ Seller should only see sell transactions
+            }
+            return false; // ❌ Should never happen, but safe fallback
+        });
+
+        // 🔹 Format the response correctly
+        const formattedTransactions = filteredTransactions.map(tx => ({
+            stock_tx_id: tx.stock_tx_id,  // ✅ Correct transaction ID for each user
+            parent_stock_tx_id: tx.buyer_id === user_id ? null : tx.parent_stock_tx_id, // ✅ Null for buyers, actual for sellers
             stock_id: tx.stock_id,
             wallet_tx_id: tx.wallet_tx_id || null,
             order_status: tx.order_status,
@@ -306,6 +347,12 @@ router.get("/getStockTransactions", authMiddleware, async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
+
+
+
 
 
 
