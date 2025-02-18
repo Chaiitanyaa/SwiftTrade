@@ -74,6 +74,21 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             await initialSellTransaction.save();
             allTransactions.push(initialSellTransaction); // Add to the response array
             console.log("📌 Initial Sell Order logged in Transactions DB:", initialSellTransaction);
+			
+			
+			 // --- Log Credit Transaction in Wallet ---
+            const walletTransaction = new Wallet({
+                wallet_tx_id: uuidv4(),
+                user_id,
+                stock_tx_id: initialSellTransaction.stock_tx_id,
+                is_debit: false, // Credit transaction for seller
+                amount: price * quantity,
+                timestamp: new Date(),
+            });
+
+            await walletTransaction.save();
+            console.log(`💰 Wallet Transaction Logged (Credit) for seller:`, walletTransaction);
+			
 
             // --- Send Sell Order to the Matching Engine ---
             const sellOrder = {
@@ -125,6 +140,9 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 user.wallet_balance -= matchQuantity * matchPrice;
                 await user.save();
                 console.log(`✅ Wallet Updated: New Balance: ${user.wallet_balance}`);
+				
+				
+				
 
                 // --- Create BUY Transaction ---
                 const buyTransaction = new Transaction({
@@ -144,6 +162,20 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 
                 await buyTransaction.save();
                 allTransactions.push(buyTransaction);
+				
+				
+				// --- Log Debit Transaction in Wallet ---
+                const walletTransaction = new Wallet({
+                    wallet_tx_id: uuidv4(),
+                    user_id,
+                    stock_tx_id: buyTransaction.stock_tx_id,
+                    is_debit: true, // Debit transaction for buyer
+                    amount: matchQuantity * matchPrice,
+                    timestamp: new Date(),
+                });
+
+                await walletTransaction.save();
+                console.log(`💰 Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
 
                 // --- Seller Updates ---
                 const sellerUser = await User.findById(sellOrder.user_id);

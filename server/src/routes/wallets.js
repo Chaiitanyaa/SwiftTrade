@@ -66,7 +66,31 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
 
 
 
-//router.get("/getWalletTransactions", authenticateToken, async (req, res) => 
+router.get("/getWalletTransactions", authMiddleware, async (req, res) => {
+    try {
+        const user_id = req.user.id;
+        console.log(`🔍 Fetching wallet transactions for user: ${user_id}`);
+
+        const walletTransactions = await Wallet.find({ user_id }).sort({ timestamp: -1 });
+
+        if (!walletTransactions.length) {
+            return res.json({ success: true, data: [] });
+        }
+
+        const formattedTransactions = walletTransactions.map(tx => ({
+            wallet_tx_id: tx.wallet_tx_id,
+            stock_tx_id: tx.stock_tx_id,
+            is_debit: tx.is_debit,
+            amount: tx.amount,
+            time_stamp: tx.timestamp
+        }));
+
+        return res.json({ success: true, data: formattedTransactions });
+    } catch (error) {
+        console.error("❌ Error fetching wallet transactions:", error);
+        return res.status(500).json({ success: false, data: { error: error.message } });
+    }
+});
    
 
 
