@@ -34,21 +34,24 @@ router.post("/login", async (req, res) => {
         const { user_name, password } = req.body;
         const user = await User.findOne({ user_name });
 
-        // Check if user exists
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(401).json({ success: false, error: "Invalid credentials" });
         }
 
-        // Generate JWT token
         const token = jwt.sign(
             { id: user._id.toString(), user_name: user.user_name },
-            process.env.JWT_SECRET || "your_secret", // Use env variable for security
+            process.env.JWT_SECRET || "your_secret",
             { expiresIn: "1h" }
         );
+
         user.jwt_token = token;
         await user.save();
 
-        return res.json({ success: true, token });
+        return res.json({ 
+            success: true, 
+            data: { token }  // ✅ Wrapping token inside `data`
+        });
+
     } catch (error) {
         console.error("❌ Login Error:", error);
         return res.status(500).json({ success: false, error: "Server error" });

@@ -18,10 +18,14 @@ app.get("/", (req, res) => {
   res.send("✅ Backend is running!");
 });
 
-app.use("/api/users", usersRoute);
-app.use("/api/wallet", walletRoutes);
-app.use("/api/stocks", stocksRoute);
-app.use("/api/userportfolio", userPortfolioRoutes);
-app.use("/api/transactions", transactionsRoute);
+app.use("/authentication", usersRoute);
+
+app.use("/transaction", walletRoutes);
+app.use("/transaction", userPortfolioRoutes);
+app.use("/transaction", transactionsRoute);
+
+app.use("/engine", transactionsRoute);
+
+app.use("/setup", stocksRoute);
 
 module.exports = app;
