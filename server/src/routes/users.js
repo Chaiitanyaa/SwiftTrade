@@ -35,7 +35,7 @@ router.post("/login", async (req, res) => {
         const user = await User.findOne({ user_name });
 
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ success: false, error: "Invalid credentials" });
+            return res.status(400).json({ success: false, error: "Invalid credentials" });
         }
 
         const token = jwt.sign(
@@ -63,7 +63,7 @@ router.get("/profile", async (req, res) => {
     try {
         const token = req.headers.authorization?.split(" ")[1];
         if (!token) {
-            return res.status(401).json({ success: false, error: "Unauthorized" });
+            return res.status(400).json({ success: false, error: "Unauthorized" });
         }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET || "your_secret");

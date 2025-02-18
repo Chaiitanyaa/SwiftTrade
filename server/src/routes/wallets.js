@@ -53,7 +53,7 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
 
         console.log(`✅ Wallet balance for user ${user_id}: $${user.wallet_balance}`);
 
-        return res.json({ success: true, data: { wallet_balance: user.wallet_balance } });
+        return res.json({ success: true, data: { balance: user.wallet_balance } });
 
     } catch (error) {
         console.error("❌ Error fetching wallet balance:", error);
