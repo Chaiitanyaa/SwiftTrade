@@ -22,6 +22,7 @@ This repository contains the backend code for SwiftTrade, a stock trading applic
 
 ## Project Structure
 
+`
 src/
 ├── server.js          // Entry point of the application
 ├── app.js             // Express app setup
@@ -45,10 +46,11 @@ src/
 │   └── db.js           // Database connection setup
 └── middleware/
 └── authMiddleware.js // Authentication middleware
+`
 
 ## Installation and Running with Docker
 
-1.  **Clone the repository:** `git clone <repository_url>`
+1.  **Clone the repository:** `git clone https://github.com/Chaiitanyaa/DayTrade.git`
 2.  **Build the Docker image:**
     ```bash
     docker compose build 
