@@ -9,7 +9,7 @@ const { v4: uuidv4 } = require("uuid");
 const User = require("../models/User");
 
 
-// @desc Get all user portfolios
+// Get all user portfolios
 router.get("/", async (req, res) => {
     try {
         const portfolios = await UserPortfolio.find();
@@ -19,7 +19,7 @@ router.get("/", async (req, res) => {
     }
 });
 
-// @desc Add a new user portfolio
+// Add a new user portfolio
 router.post("/", async (req, res) => {
     try {
         const newPortfolio = new UserPortfolio(req.body);

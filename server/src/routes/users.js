@@ -49,7 +49,7 @@ router.post("/login", async (req, res) => {
 
         return res.json({ 
             success: true, 
-            data: { token }  // ✅ Wrapping token inside `data`
+            data: { token }  
         });
 
     } catch (error) {
@@ -58,7 +58,7 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// Get current user profile (Protected Route Example)
+// Get current user profile
 router.get("/profile", async (req, res) => {
     try {
         const token = req.headers.authorization?.split(" ")[1];

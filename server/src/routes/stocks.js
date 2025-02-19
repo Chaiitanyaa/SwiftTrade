@@ -63,7 +63,7 @@ router.post("/addStockToUser", authenticateToken, async (req, res) => {
             return res.status(400).json({ success: false, data: { error: "Invalid stock ID or quantity" } });
         }
 
-        const stock = await Stock.findOne({ stock_id }); // 🔹 FIX: Match stock_id as String
+        const stock = await Stock.findOne({ stock_id });
         if (!stock) {
             return res.status(404).json({ success: false, data: { error: "Stock not found" } });
         }

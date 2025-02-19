@@ -52,7 +52,7 @@ class MatchingEngine {
 
         if (order.quantity > 0) {
             this.orderBook.addOrder(order);
-            console.log(`✅ Order added to order book:`, order);
+            console.log(`Order added to order book:`, order);
 
             // Remove stock from UserPortfolio
             try {
@@ -64,12 +64,12 @@ class MatchingEngine {
                         portfolio.quantity_owned = 0;
                     }
                     await portfolio.save();
-                    console.log(`✅ Updated UserPortfolio: Removed ${order.quantity} stocks for user ${order.user_id}`);
+                    console.log(`Updated UserPortfolio: Removed ${order.quantity} stocks for user ${order.user_id}`);
                 } else {
-                    console.warn(`⚠️ UserPortfolio not found for user ${order.user_id} and stock ${order.stock_id}`);
+                    console.warn(`UserPortfolio not found for user ${order.user_id} and stock ${order.stock_id}`);
                 }
             } catch (error) {
-                console.error(`❌ Error updating UserPortfolio:`, error);
+                console.error(`Error updating UserPortfolio:`, error);
             }
         }
 
@@ -90,7 +90,7 @@ class MatchingEngine {
             return { status: "Error", message: "Order not found or already executed" };
         }
 
-        console.log(`🛑 Order cancelled:`, order);
+        console.log(`Order cancelled:`, order);
 
         // Restore stocks to UserPortfolio
         if (!isBuy) {
@@ -99,9 +99,9 @@ class MatchingEngine {
                 if (portfolio) {
                     portfolio.quantity_owned += order.quantity;
                     await portfolio.save();
-                    console.log(`✅ Restored ${order.quantity} stocks to user ${userId} after cancellation`);
+                    console.log(`Restored ${order.quantity} stocks to user ${userId} after cancellation`);
                 } else {
-                    console.warn(`⚠️ No UserPortfolio found for user ${userId}. Creating new entry.`);
+                    console.warn(`No UserPortfolio found for user ${userId}. Creating new entry.`);
                     const newPortfolio = new UserPortfolio({
                         userid: userId,
                         stock_id: order.stock_id,
@@ -110,19 +110,19 @@ class MatchingEngine {
                     await newPortfolio.save();
                 }
             } catch (error) {
-                console.error(`❌ Error restoring UserPortfolio:`, error);
+                console.error(`Error restoring UserPortfolio:`, error);
             }
         }
 
         return { status: "Order cancelled", order };
     }
 
-	// ✅ Add this function to return the full order book
+	// Add this function to return the full order book
     getOrderBook() {
         return this.orderBook;
     }
 }
 
-const engineInstance = new MatchingEngine(); // ✅ Singleton instance
+const engineInstance = new MatchingEngine(); //Singleton instance
 
 module.exports = MatchingEngine;
