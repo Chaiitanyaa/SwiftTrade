@@ -1,8 +1,6 @@
-#SwiftTrade
-
 # SwiftTrade Backend
 
-This repository contains the backend code for SwiftTrade, a stock trading application. 
+This repository contains the code for SwiftTrade, a stock trading application. 
 
 ## Features
 
