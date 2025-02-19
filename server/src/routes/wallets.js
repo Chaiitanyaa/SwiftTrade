@@ -1,10 +1,8 @@
 const express = require("express");
 const Wallet = require("../models/Wallet");
-const { v4: uuidv4 } = require("uuid");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User");
-const Transaction = require("../models/Transaction");
 
 //Add Money to Wallet
 router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
@@ -48,7 +46,7 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
         const user = await User.findOne({ _id: user_id });
 
         if (!user) {
-            console.error("❌ User not found:", user_id);
+            console.error("User not found:", user_id);
             return res.status(404).json({ success: false, data: { error: "User not found" } });
         }
 
@@ -57,7 +55,7 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
         return res.json({ success: true, data: { balance: user.wallet_balance } });
 
     } catch (error) {
-        console.error("❌ Error fetching wallet balance:", error);
+        console.error("Error fetching wallet balance:", error);
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });

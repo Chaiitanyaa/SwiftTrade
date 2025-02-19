@@ -2,12 +2,7 @@ const express = require("express");
 const router = express.Router();
 const UserPortfolio = require("../models/UserPortfolio");
 const authMiddleware = require("../middleware/authMiddleware");
-const Transaction = require("../models/Transaction");
 const Stock = require("../models/Stock");
-const Wallet = require("../models/Wallet");
-const { v4: uuidv4 } = require("uuid");
-const User = require("../models/User");
-
 
 // Get all user portfolios
 router.get("/", async (req, res) => {

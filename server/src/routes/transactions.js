@@ -11,11 +11,10 @@ const UserPortfolio = require("../models/UserPortfolio");
 const User = require("../models/User");
 const engine = new MatchingEngine();
 
-
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     console.log("Received order:", req.body);
 
-    const user_id = req.user.id; // Extract user ID from JWT token
+    const user_id = req.user.id;
 	const current_user_id = user_id;
     let { stock_id, is_buy, order_type, quantity, price } = req.body;
 
@@ -52,12 +51,12 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 return res.status(400).json({ success: false, data: { error: "Not enough stocks to sell" } });
             }
 
-            // 🔹 Deduct stocks from UserPortfolio
+            //Deduct stocks from UserPortfolio
             userPortfolio.quantity_owned -= quantity;
             await userPortfolio.save();
             console.log(`Portfolio Updated: ${user_id} now owns ${userPortfolio.quantity_owned} shares of ${stock.stock_name}`);
 
-            // --- Log Sell Order in Transactions ---
+            //Log Sell Order in Transactions
             const initialSellTransaction = new Transaction({
                 stock_tx_id: uuidv4(),
                 stock_id,
@@ -76,11 +75,8 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             await initialSellTransaction.save();
             allTransactions.push(initialSellTransaction); // Add to the response array
             console.log("Initial Sell Order logged in Transactions DB:", initialSellTransaction);
-			
-			
-			
-		
-            // --- Send Sell Order to the Matching Engine ---
+					
+            //Send Sell Order to the Matching Engine ---
             const sellOrder = {
                 id: initialSellTransaction.stock_tx_id,
                 stock_id,
@@ -94,7 +90,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             await engine.placeOrder(sellOrder);
         }
 
-        // --- BUY ORDER Handling ---
+        //BUY ORDER Handling
         if (is_buy) {
             console.log("Processing MARKET Buy Order...");
 
@@ -130,10 +126,8 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 user.wallet_balance -= matchQuantity * matchPrice;
                 await user.save();
                 console.log(`Wallet Updated: New Balance: ${user.wallet_balance}`);
-				
-				
-				
-                // --- Create BUY Transaction ---
+								
+                //Create BUY Transaction
                 const buyTransaction = new Transaction({
                     stock_tx_id: uuidv4(),
                     stock_id,
@@ -152,7 +146,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 				await buyTransaction.save();
 				allTransactions.push(buyTransaction);
 				
-				// --- Create SELL Transaction  ---
+				//Create SELL Transaction
 				const sellTransaction = new Transaction({
 					stock_tx_id: uuidv4(),  //Unique ID
 					stock_id,
@@ -168,30 +162,21 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 					seller_id: sellOrder.user_id,
 				});
 				
-
-
-                
 				await sellTransaction.save();
 				
-                
-				
-				
-				
-				
 				const sellerWalletTransaction = new Wallet({
-				wallet_tx_id: sellTransaction.wallet_tx_id,
-				user_id: buyTransaction.seller_id, 
-				stock_tx_id: sellTransaction.stock_tx_id,
-				is_debit: false, // Credit transaction for the seller
-				amount: matchQuantity * matchPrice,
-				timestamp: new Date(),
+                    wallet_tx_id: sellTransaction.wallet_tx_id,
+                    user_id: buyTransaction.seller_id, 
+                    stock_tx_id: sellTransaction.stock_tx_id,
+                    is_debit: false, // Credit transaction for the seller
+                    amount: matchQuantity * matchPrice,
+                    timestamp: new Date(),
 				});
 
 				await sellerWalletTransaction.save(); // Ensure transaction is saved
 				console.log(`Wallet Transaction Logged (Credit) for seller:`, sellerWalletTransaction);
 				
-				
-				// --- Log Debit Transaction in Wallet ---
+				//Log Debit Transaction in Wallet
 				const walletTransaction = new Wallet({
 						wallet_tx_id: buyTransaction.wallet_tx_id,
 						user_id: current_user_id,
@@ -204,18 +189,14 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 				await walletTransaction.save();
 				console.log(`Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
 				
-				
-				
-			
-
-                // --- Seller Updates ---
+                //Seller Updates
                 const sellerUser = await User.findById(sellOrder.user_id);
                 if (sellerUser) {
                     sellerUser.wallet_balance += matchQuantity * matchPrice;
                     await sellerUser.save();
                 }
 
-                // --- Sell Order Updates ---
+                //Sell Order Updates
                 const originalSellTx = await Transaction.findOne({ stock_tx_id: sellOrder.id });
                 if (originalSellTx) {
                     if (matchQuantity === originalSellTx.quantity) {
@@ -242,10 +223,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 buyerPortfolio.quantity_owned += quantity;
             }
             await buyerPortfolio.save();
-            console.log(`Buyer's Portfolio Updated: ${quantity} stocks added.`);
-			
-		
-			
+            console.log(`Buyer's Portfolio Updated: ${quantity} stocks added.`);			
         }
 
         return res.json({ success: true, data: allTransactions });
@@ -255,11 +233,6 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
-
-
-
-
-
 
 router.get("/getOrderBook", async (req, res) => {
     try {
@@ -337,8 +310,6 @@ router.get("/getStockTransactions", authMiddleware, async (req, res) => {
     }
 });
 
-
-
 router.post("/cancelStockTransaction", authMiddleware, async (req, res) => {
     try {
         const { stock_tx_id } = req.body;
@@ -378,7 +349,7 @@ router.post("/cancelStockTransaction", authMiddleware, async (req, res) => {
 		});
 		
 		engine.orderBook.sellOrders = engine.orderBook.sellOrders.filter(order => {
-		return !(order.stock_id === transaction.stock_id && order.user_id === transaction.seller_id);
+		    return !(order.stock_id === transaction.stock_id && order.user_id === transaction.seller_id);
 		});
 
 		let matchedQuantity = 0;
@@ -414,27 +385,15 @@ router.post("/cancelStockTransaction", authMiddleware, async (req, res) => {
 			await userPortfolio.save();
 			console.log(`Updated user portfolio. New quantity: ${userPortfolio.quantity_owned}`);
 		}
+			
+		return res.json({ success: true, message: "Order canceled successfully.", transaction });
 
-				
-				
-				return res.json({ success: true, message: "Order canceled successfully.", transaction });
-
-			} catch (error) {
-				console.error("Error canceling order:", error);
-				return res.status(500).json({ success: false, error: error.message });
-			}
+	} 
+    catch (error) {
+	    console.error("Error canceling order:", error);
+		return res.status(500).json({ success: false, error: error.message });
+	}
 });
-
-
-
-
-
-
-
-
-
-
-
 
 router.get("/getStockPrices", async (req, res) => {
     try {
@@ -478,11 +437,5 @@ router.get("/getStockPrices", async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
-
-
-
-
-
-
 
 module.exports = router;

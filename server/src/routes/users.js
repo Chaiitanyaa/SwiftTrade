@@ -23,7 +23,7 @@ router.post("/register", async (req, res) => {
         return res.status(201).json({ success: true, data: null });
 
     } catch (error) {
-        console.error("❌ Registration Error:", error);
+        console.error("Registration Error:", error);
         return res.status(500).json({ success: false, error: "Server error" });
     }
 });
@@ -53,7 +53,7 @@ router.post("/login", async (req, res) => {
         });
 
     } catch (error) {
-        console.error("❌ Login Error:", error);
+        console.error("Login Error:", error);
         return res.status(500).json({ success: false, error: "Server error" });
     }
 });
