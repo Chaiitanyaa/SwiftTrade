@@ -260,17 +260,6 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
 
 
 
-router.post("/cancelOrder", authMiddleware, async (req, res) => {
-    const user_id = req.user.id; // Extract user ID from JWT token
-    const { order_id, is_buy } = req.body;
-
-    if (!order_id || typeof is_buy !== "boolean") {
-        return res.status(400).json({ error: "Missing required fields" });
-    }
-
-    const result = await engine.cancelOrder(order_id, user_id, is_buy);
-    return res.json(result);
-});
 
 router.get("/getOrderBook", async (req, res) => {
     try {
@@ -350,6 +339,93 @@ router.get("/getStockTransactions", authMiddleware, async (req, res) => {
 
 
 
+router.post("/cancelStockTransaction", authMiddleware, async (req, res) => {
+    try {
+        const { stock_tx_id } = req.body;
+        const user_id = req.user.id; // Extract user ID from JWT token
+
+        if (!stock_tx_id) {
+            return res.status(400).json({ success: false, error: "Missing stock transaction ID." });
+        }
+
+        console.log(`🔍 Searching for transaction with stock_tx_id: ${stock_tx_id}`);
+
+        // 🔹 Find the exact transaction using `stock_tx_id`
+        const transaction = await Transaction.findOne({ stock_tx_id });
+
+        if (!transaction) {
+            console.log(`❌ Transaction with stock_tx_id: ${stock_tx_id} not found.`);
+            return res.status(404).json({ success: false, error: "Transaction not found." });
+        }
+
+        console.log(`✅ Found transaction:`, transaction);
+
+        // 🔹 Ensure that the order is NOT completed
+        if (transaction.order_status === "COMPLETED") {
+            console.log(`⚠️ Cannot cancel COMPLETED transaction.`);
+            return res.status(400).json({ success: false, error: "Cannot cancel a completed transaction." });
+        }
+
+        // 🔹 Mark the transaction as canceled
+        transaction.order_status = "CANCELLED";
+        await transaction.save();
+        console.log(`✅ Transaction ${stock_tx_id} has been canceled.`);
+		
+		// Find all child transactions where parent_stock_tx_id matches the canceled stock_tx_id
+		const childTransactions = await Transaction.find({
+			parent_stock_tx_id: stock_tx_id,
+			is_buy: true
+		});
+
+		let matchedQuantity = 0;
+
+		// Sum up all completed buy transactions that originated from the canceled sell transaction
+		childTransactions.forEach(tx => {
+			matchedQuantity += tx.quantity;
+		});
+
+		// Calculate the amount that needs to be refunded
+		const refundQuantity = transaction.quantity - matchedQuantity;
+
+		if (refundQuantity > 0) {
+			console.log(`🔄 Refunding ${refundQuantity} stocks back to the user's portfolio.`);
+
+			// Find the user's portfolio entry for this stock
+			let userPortfolio = await UserPortfolio.findOne({
+				userid: transaction.seller_id,
+				stock_id: transaction.stock_id
+			});
+
+			if (!userPortfolio) {
+				console.log(`⚠️ No portfolio found, creating a new one for user ${transaction.seller_id}.`);
+				userPortfolio = new UserPortfolio({
+					userid: transaction.seller_id,
+					stock_id: transaction.stock_id,
+					quantity_owned: refundQuantity
+				});
+			} else {
+				userPortfolio.quantity_owned += refundQuantity;
+			}
+
+			await userPortfolio.save();
+			console.log(`✅ Updated user portfolio. New quantity: ${userPortfolio.quantity_owned}`);
+		}
+
+				
+				
+				return res.json({ success: true, message: "Order canceled successfully.", transaction });
+
+			} catch (error) {
+				console.error("❌ Error canceling order:", error);
+				return res.status(500).json({ success: false, error: error.message });
+			}
+});
+
+
+
+
+
+
 
 
 
@@ -398,6 +474,9 @@ router.get("/getStockPrices", async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
+
+
+
 
 
 
