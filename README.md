@@ -20,34 +20,6 @@ This repository contains the backend code for SwiftTrade, a stock trading applic
 - MongoDB
 - Docker
 
-## Project Structure
-
-`
-src/
-├── server.js          // Entry point of the application
-├── app.js             // Express app setup
-├── routes/
-│   ├── users.js        // User authentication routes
-│   ├── wallets.js      // Wallet management routes
-│   ├── stocks.js       // Stock management routes
-│   ├── transactions.js  // Transaction handling routes
-│   └── userportfolio.js // User portfolio routes
-├── matchingEngine/
-│   └── matchingEngine.js // Stock matching engine logic
-├── orderbook/
-│   └── orderBook.js    // Order book implementation
-├── models/
-│   ├── User.js         // User model
-│   ├── Wallet.js       // Wallet model
-│   ├── Stock.js        // Stock model
-│   ├── Transaction.js   // Transaction model
-│   └── UserPortfolio.js// User portfolio model
-├── config/
-│   └── db.js           // Database connection setup
-└── middleware/
-└── authMiddleware.js // Authentication middleware
-`
-
 ## Installation and Running with Docker
 
 1.  **Clone the repository:** `git clone https://github.com/Chaiitanyaa/DayTrade.git`
