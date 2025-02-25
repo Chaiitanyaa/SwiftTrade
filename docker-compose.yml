@@ -1,18 +1,18 @@
 services:
   backend:
     build:
-      context: ./server  # Build from the `/server/` directory
+      context: ./backend/server  # Update the path to the new location
       dockerfile: Dockerfile
     container_name: trading_backend
     restart: always
     ports:
-      - "3001:3001"  # Map port 3001
+      - "3001:3001"
     depends_on:
       - mongo
-    working_dir: /app/src  # Ensures the application runs from `src/`
+    working_dir: /app/src
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
-      - PORT=3001  # Port for Express.js
+      - PORT=3001
     networks:
       - trading_network
 
