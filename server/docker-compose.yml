@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # api-gateway:
+  #   build: ./server/api-gateway
+  #   container_name: api_gateway
+  #   restart: always
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - user-service
+  #     - transaction-service
+  #     - matching-engine
+  #     - wallet-service
+  #     - stock-service
+  #   networks:
+  #     - trading_network
+
+  user-service:
+    build: ./services/user_service
+    container_name: user_service
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+      - MONGO_URI=mongodb://mongo:27017/swifttrade
+    networks:
+      - trading_network
+
+  transaction-service:
+    build: ./services/transaction_service
+    container_name: transaction_service
+    restart: always
+    ports:
+      - "5002:5002"
+    environment:
+      - PORT=5002
+      - MONGO_URI=mongodb://mongo:27017/swifttrade
+    networks:
+      - trading_network
+
+  matching-engine:
+    build: ./services/matching_engine
+    container_name: matching_engine
+    restart: always
+    ports:
+      - "5003:5003"
+    environment:
+      - PORT=5003
+    networks:
+      - trading_network
+
+  wallet-service:
+    build: ./services/wallet_service
+    container_name: wallet_service
+    restart: always
+    ports:
+      - "5004:5004"
+    environment:
+      - PORT=5004
+      - MONGO_URI=mongodb://mongo:27017/swifttrade
+    networks:
+      - trading_network
+
+  stock-service:
+    build: ./services/stock_service
+    container_name: stock_service
+    restart: always
+    ports:
+      - "5005:5005"
+    environment:
+      - PORT=5005
+      - MONGO_URI=mongodb://mongo:27017/swifttrade
+    networks:
+      - trading_network
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    networks:
+      - trading_network
+    volumes:
+      - mongo_data:/data/db
+
+networks:
+  trading_network:
+
+
+volumes:
+  mongo_data:
