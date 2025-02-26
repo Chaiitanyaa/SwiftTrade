@@ -76,11 +76,10 @@
 const express = require("express");
 const Wallet = require("../models/Wallet");
 const { v4: uuidv4 } = require("uuid");
-const axios = require("axios");  // ✅ Use API calls instead of direct DB access
+const axios = require("axios");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 
-// ✅ Add Money to Wallet (Uses API Call to `user_service`)
 router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
     try {
         const user_id = req.user.id;
@@ -92,7 +91,6 @@ router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
 
         console.log(`🔍 Looking for user with ID: ${user_id}`);
 
-        // ✅ Fetch user data from `user_service`
         const userResponse = await axios.get(`http://user_service:5001/api/users/${user_id}`);
         const user = userResponse.data;
 
@@ -119,7 +117,6 @@ router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
     }
 });
 
-// ✅ Get Wallet Balance
 router.get("/getWalletBalance", authMiddleware, async (req, res) => {
     try {
         const user_id = req.user.id;
@@ -131,12 +128,12 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
             return res.status(404).json({ success: false, data: { error: "Wallet not found" } });
         }
 
-        console.log(`✅ Wallet balance for user ${user_id}: $${wallet.balance}`);
+        console.log(`Wallet balance for user ${user_id}: $${wallet.balance}`);
 
         return res.json({ success: true, data: { wallet_balance: wallet.balance } });
 
     } catch (error) {
-        console.error("❌ Error fetching wallet balance:", error);
+        console.error("Error fetching wallet balance:", error);
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
