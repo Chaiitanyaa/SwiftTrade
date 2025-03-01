@@ -51,10 +51,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 return res.status(400).json({ success: false, data: { error: "Not enough stocks to sell" } });
             }
 
-            //Deduct stocks from UserPortfolio
-            userPortfolio.quantity_owned -= quantity;
-            await userPortfolio.save();
-            console.log(`Portfolio Updated: ${user_id} now owns ${userPortfolio.quantity_owned} shares of ${stock.stock_name}`);
+            
 
             //Log Sell Order in Transactions
             const initialSellTransaction = new Transaction({
@@ -94,11 +91,24 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         if (is_buy) {
             console.log("Processing MARKET Buy Order...");
 
-            let sellOrders = engine.orderBook.sellOrders.filter(order => order.stock_id === stock_id);
+            
+			
+			let sellOrders = engine.orderBook.sellOrders.filter(order => 
+			order.stock_id === stock_id && order.user_id !== user_id
+			);
+			
             if (!sellOrders.length) {
                 console.warn("No sell orders available for this stock.");
                 return res.status(400).json({ success: false, data: { error: "No available sell orders for this stock." } });
             }
+			
+			// **Check if total available quantity is enough before proceeding**
+			let totalAvailable = sellOrders.reduce((sum, order) => sum + order.quantity, 0);
+
+			if (totalAvailable < quantity) {
+				console.warn(`Not enough stocks available for this buy order. Requested: ${quantity}, Available: ${totalAvailable}`);
+				return res.status(400).json({ success: false, data: { error: "Not enough stocks available for this order." } });
+			}
 
             let remainingQuantity = quantity;
             let totalCost = 0;
