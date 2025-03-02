@@ -10,6 +10,7 @@ const Wallet = require("../models/Wallet");
 const UserPortfolio = require("../models/UserPortfolio");
 const User = require("../models/User");
 const engine = new MatchingEngine();
+const client = require("../config/redis"); 
 
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     console.log("Received order:", req.body);
@@ -409,7 +410,7 @@ router.get("/getStockPrices", async (req, res) => {
     try {
         console.log("Fetching stock prices from Order Book...");
 
-        //Get order book data
+        // Get order book data
         const buyOrders = engine.orderBook.buyOrders;
         const sellOrders = engine.orderBook.sellOrders;
 
@@ -420,6 +421,15 @@ router.get("/getStockPrices", async (req, res) => {
 
         // Create an array of unique stock_ids from sell orders
         const stockIds = [...new Set(sellOrders.map(order => order.stock_id))];
+
+        // Check Redis for cached stock prices
+        const cacheKey = `stock_prices_${stockIds.join("_")}`;
+        const cachedData = await client.get(cacheKey);
+
+        if (cachedData) {
+            console.log("📌 Fetching stock prices from Redis cache...");
+            return res.json({ success: true, data: JSON.parse(cachedData) });
+        }
 
         // Fetch stock names from MongoDB
         const stockData = await Stock.find({ stock_id: { $in: stockIds } });
@@ -434,11 +444,14 @@ router.get("/getStockPrices", async (req, res) => {
             if (!stockPrices[order.stock_id] || order.price < stockPrices[order.stock_id].current_price) {
                 stockPrices[order.stock_id] = {
                     stock_id: order.stock_id,
-                    stock_name: stockMap[order.stock_id] || "Unknown", //Get stock_name from DB
+                    stock_name: stockMap[order.stock_id] || "Unknown", // Get stock_name from DB
                     current_price: order.price
                 };
             }
         });
+
+        // Cache the stock prices in Redis for 1 hour
+        await client.setEx(cacheKey, 3600, JSON.stringify(Object.values(stockPrices)));
 
         return res.json({ success: true, data: Object.values(stockPrices) });
 
