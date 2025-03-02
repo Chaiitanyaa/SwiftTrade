@@ -1,20 +1,81 @@
+version: "3.8"
+
 services:
-  backend:
-    build:
-      context: ./backend/server  # Update the path to the new location
-      dockerfile: Dockerfile
-    container_name: trading_backend
+  authentication:
+    build: ./backend/authentication
+    container_name: authentication_service
     restart: always
     ports:
-      - "3001:3001"
-    depends_on:
-      - mongo
-    working_dir: /app/src
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/tradingDB
-      - PORT=3001
+      - "3002:3002"
     networks:
       - trading_network
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
+
+  transaction:
+    build: ./backend/transaction
+    container_name: transaction_service
+    restart: always
+    ports:
+      - "3003:3003"
+    depends_on:
+      - matching-engine
+      - mongo
+    networks:
+      - trading_network
+    volumes:
+      - shared_matching_data:/app/matching-data
+    environment:
+      - NODE_ENV=production
+      - MATCHING_ENGINE_URL=http://matching_engine_service:3006
+      - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
+
+  engine:
+    build: ./backend/engine
+    container_name: engine_service
+    restart: always
+    ports:
+      - "3004:3004"
+    depends_on:
+      - matching-engine
+      - mongo
+    networks:
+      - trading_network
+    volumes:
+      - shared_matching_data:/app/matching-data
+    environment:
+      - NODE_ENV=production
+      - MATCHING_ENGINE_URL=http://matching_engine_service:3006
+      - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
+
+  setup:
+    build: ./backend/setup
+    container_name: setup_service
+    restart: always
+    ports:
+      - "3005:3005"
+    networks:
+      - trading_network
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
+
+  matching-engine:
+    build: ./backend/matching-engine
+    container_name: matching_engine_service
+    restart: always
+    ports:
+      - "3006:3006"
+    depends_on:
+      - mongo
+    networks:
+      - trading_network
+    volumes:
+      - shared_matching_data:/app/matching-data
+    environment:
+      - NODE_ENV=production
+      - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
 
   mongo:
     image: mongo:latest
@@ -22,13 +83,31 @@ services:
     restart: always
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - trading_network
+
+  nginx:
+    image: nginx:latest
+    container_name: trading_nginx
+    restart: always
+    ports:
+      - "3001:3001"
+    depends_on:
+      - authentication
+      - transaction
+      - engine
+      - setup
+      - matching-engine
     networks:
       - trading_network
     volumes:
-      - mongo_data:/data/db
+      - ./backend/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
 
 networks:
   trading_network:
 
 volumes:
   mongo_data:
+  shared_matching_data:
