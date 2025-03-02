@@ -1,14 +1,53 @@
 const OrderBook = require("../orderbook/orderBook");
 const UserPortfolio = require("../models/UserPortfolio");
+const Redis = require("ioredis");
 
+// Initialize Redis
+const redisClient = new Redis({ host: process.env.REDIS_HOST || "localhost", port: 6379 });
+const redisSubscriber = new Redis({ host: process.env.REDIS_HOST || "localhost", port: 6379 });
 
 class MatchingEngine {
     constructor() {
         this.orderBook = new OrderBook();
         this.tradeHistory = [];
+
+        // Load Order Book from Redis on startup
+        this.loadOrderBook();
+
+        // Listen for order updates from Redis Pub/Sub
+        this.listenForUpdates();
     }
 
+    // 🔹 Load order book from Redis
+    async loadOrderBook() {
+        try {
+            const buyOrders = await redisClient.get("order_book:buyOrders");
+            const sellOrders = await redisClient.get("order_book:sellOrders");
+
+            this.orderBook.buyOrders = buyOrders ? JSON.parse(buyOrders) : [];
+            this.orderBook.sellOrders = sellOrders ? JSON.parse(sellOrders) : [];
+
+            console.log("📌 Order book loaded from Redis.");
+        } catch (error) {
+            console.error("❌ Error loading order book from Redis:", error);
+        }
+    }
+
+    // 🔹 Save order book to Redis
+    async saveOrderBook() {
+        try {
+            await redisClient.set("order_book:buyOrders", JSON.stringify(this.orderBook.buyOrders));
+            await redisClient.set("order_book:sellOrders", JSON.stringify(this.orderBook.sellOrders));
+            console.log("✅ Order book saved to Redis.");
+        } catch (error) {
+            console.error("❌ Error saving order book to Redis:", error);
+        }
+    }
+
+    // 🔹 Place an order and sync with Redis
     async placeOrder(order) {
+        console.log(`⚡️ Placing order: ${JSON.stringify(order)}`);
+
         if (order.is_buy) {
             let bestSell = this.orderBook.getBestSell();
             while (bestSell && order.price >= bestSell.price && order.quantity > 0) {
@@ -19,7 +58,7 @@ class MatchingEngine {
                 this.tradeHistory.push({
                     buyOrderId: order.id,
                     sellOrderId: bestSell.id,
-					sellerUserId: bestSell.user_id,
+                    sellerUserId: bestSell.user_id,
                     price: bestSell.price,
                     quantity: matchQuantity
                 });
@@ -54,15 +93,11 @@ class MatchingEngine {
             this.orderBook.addOrder(order);
             console.log(`Order added to order book:`, order);
 
-            // Remove stock from UserPortfolio
+            // 🔹 Remove stock from UserPortfolio
             try {
                 const portfolio = await UserPortfolio.findOne({ userid: order.user_id, stock_id: order.stock_id });
                 if (portfolio) {
-                    if (portfolio.quantity_owned >= order.quantity) {
-                        portfolio.quantity_owned -= order.quantity;
-                    } else {
-                        portfolio.quantity_owned = 0;
-                    }
+                    portfolio.quantity_owned = Math.max(0, portfolio.quantity_owned - order.quantity);
                     await portfolio.save();
                     console.log(`Updated UserPortfolio: Removed ${order.quantity} stocks for user ${order.user_id}`);
                 } else {
@@ -73,9 +108,16 @@ class MatchingEngine {
             }
         }
 
+        // 🔹 Save updated order book to Redis
+        await this.saveOrderBook();
+
+        // 🔹 Publish update to notify all instances
+        await redisClient.publish("order_update", JSON.stringify(order));
+
         return { status: "Order placed", tradeHistory: this.tradeHistory };
     }
 
+    // 🔹 Cancel an order and sync with Redis
     async cancelOrder(orderId, userId, isBuy) {
         let order;
         if (isBuy) {
@@ -92,7 +134,7 @@ class MatchingEngine {
 
         console.log(`Order cancelled:`, order);
 
-        // Restore stocks to UserPortfolio
+        // 🔹 Restore stocks to UserPortfolio
         if (!isBuy) {
             try {
                 const portfolio = await UserPortfolio.findOne({ userid: userId, stock_id: order.stock_id });
@@ -114,15 +156,42 @@ class MatchingEngine {
             }
         }
 
+        // 🔹 Save updated order book to Redis
+        await this.saveOrderBook();
+
+        // 🔹 Publish update to notify all instances
+        await redisClient.publish("order_update", JSON.stringify({ cancel: true, orderId }));
+
         return { status: "Order cancelled", order };
     }
 
-	// Add this function to return the full order book
+    // 🔹 Listen for order updates from Redis
+    async listenForUpdates() {
+        redisSubscriber.subscribe("order_update", (err, count) => {
+            if (err) {
+                console.error("❌ Failed to subscribe to order updates:", err);
+            } else {
+                console.log(`📡 Subscribed to order updates (${count} channels).`);
+            }
+        });
+
+        redisSubscriber.on("message", async (channel, message) => {
+            if (channel === "order_update") {
+                const order = JSON.parse(message);
+                console.log("📡 Received order update:", order);
+
+                // Reload order book when any order is placed/canceled
+                await this.loadOrderBook();
+            }
+        });
+    }
+
+    // 🔹 Return full order book
     getOrderBook() {
         return this.orderBook;
     }
 }
 
-const engineInstance = new MatchingEngine(); //Singleton instance
+const engineInstance = new MatchingEngine(); // Singleton instance
 
-module.exports = MatchingEngine;
+module.exports = engineInstance;

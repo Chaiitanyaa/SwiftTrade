@@ -4,14 +4,24 @@ const UserPortfolio = require("../models/UserPortfolio");
 const router = express.Router();
 const authenticateToken = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
+const client = require("../config/redis"); // Import Redis client
 
 
 
 // Fetch all stocks
 router.get("/", async (req, res) => {
     try {
-        const stocks = await Stock.find();
-        res.json({ success: true, data: stocks });
+        client.get("all_stocks", async (err, stocks) => {
+            if (stocks) {
+                console.log("📌 Fetching Stocks from Cache");
+                return res.json({ success: true, data: JSON.parse(stocks) });
+            } else {
+                console.log("📌 Fetching Stocks from Database");
+                const stockData = await Stock.find();
+                client.setex("all_stocks", 3600, JSON.stringify(stockData)); // Cache for 1 hour
+                return res.json({ success: true, data: stockData });
+            }
+        });
     } catch (err) {
         res.status(500).json({ success: false, data: { error: err.message } });
     }
