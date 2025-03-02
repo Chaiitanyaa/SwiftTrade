@@ -9,14 +9,14 @@ const router = express.Router();
 const Wallet = require("../models/Wallet");
 const UserPortfolio = require("../models/UserPortfolio");
 const User = require("../models/User");
-const engine = new MatchingEngine();
+const engine = require("../matchingEngine/matchingEngine.js");
 const client = require("../config/redis"); 
 
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     console.log("Received order:", req.body);
 
     const user_id = req.user.id;
-	const current_user_id = user_id;
+    const current_user_id = user_id;
     let { stock_id, is_buy, order_type, quantity, price } = req.body;
 
     if (!stock_id || typeof is_buy !== "boolean" || !order_type || !quantity) {
@@ -36,7 +36,6 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
         }
 
         let allTransactions = [];
-		let initialSellTransaction = null; //Declare globally
 
         // --- SELL ORDER Handling (Deduct stocks from UserPortfolio) ---
         if (!is_buy) {
@@ -52,9 +51,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 return res.status(400).json({ success: false, data: { error: "Not enough stocks to sell" } });
             }
 
-            
-
-            //Log Sell Order in Transactions
+            // Log Sell Order in Transactions
             const initialSellTransaction = new Transaction({
                 stock_tx_id: uuidv4(),
                 stock_id,
@@ -71,10 +68,10 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             });
 
             await initialSellTransaction.save();
-            allTransactions.push(initialSellTransaction); // Add to the response array
+            allTransactions.push(initialSellTransaction);
             console.log("Initial Sell Order logged in Transactions DB:", initialSellTransaction);
-					
-            //Send Sell Order to the Matching Engine ---
+
+            // Send Sell Order to Redis-backed Matching Engine
             const sellOrder = {
                 id: initialSellTransaction.stock_tx_id,
                 stock_id,
@@ -88,28 +85,25 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             await engine.placeOrder(sellOrder);
         }
 
-        //BUY ORDER Handling
+        // --- BUY ORDER Handling ---
         if (is_buy) {
             console.log("Processing MARKET Buy Order...");
 
-            
-			
-			let sellOrders = engine.orderBook.sellOrders.filter(order => 
-			order.stock_id === stock_id && order.user_id !== user_id
-			);
-			
+            let sellOrders = engine.orderBook.sellOrders.filter(order => 
+                order.stock_id === stock_id && order.user_id !== user_id
+            );
+
             if (!sellOrders.length) {
                 console.warn("No sell orders available for this stock.");
                 return res.status(400).json({ success: false, data: { error: "No available sell orders for this stock." } });
             }
-			
-			// **Check if total available quantity is enough before proceeding**
-			let totalAvailable = sellOrders.reduce((sum, order) => sum + order.quantity, 0);
 
-			if (totalAvailable < quantity) {
-				console.warn(`Not enough stocks available for this buy order. Requested: ${quantity}, Available: ${totalAvailable}`);
-				return res.status(400).json({ success: false, data: { error: "Not enough stocks available for this order." } });
-			}
+            // Check if total available quantity is enough
+            let totalAvailable = sellOrders.reduce((sum, order) => sum + order.quantity, 0);
+            if (totalAvailable < quantity) {
+                console.warn(`Not enough stocks available for this buy order. Requested: ${quantity}, Available: ${totalAvailable}`);
+                return res.status(400).json({ success: false, data: { error: "Not enough stocks available for this order." } });
+            }
 
             let remainingQuantity = quantity;
             let totalCost = 0;
@@ -137,8 +131,8 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 user.wallet_balance -= matchQuantity * matchPrice;
                 await user.save();
                 console.log(`Wallet Updated: New Balance: ${user.wallet_balance}`);
-								
-                //Create BUY Transaction
+
+                // Create BUY Transaction
                 const buyTransaction = new Transaction({
                     stock_tx_id: uuidv4(),
                     stock_id,
@@ -146,82 +140,72 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                     order_status: "COMPLETED",
                     parent_stock_tx_id: sellOrder.id,
                     is_buy: true,
-                    order_type: order_type,
+                    order_type,
                     stock_price: matchPrice,
                     quantity: matchQuantity,
                     time_stamp: new Date(),
                     buyer_id: user_id,
                     seller_id: sellOrder.user_id,
                 });
-				
-				await buyTransaction.save();
-				allTransactions.push(buyTransaction);
-				
-				//Create SELL Transaction
-				const sellTransaction = new Transaction({
-					stock_tx_id: uuidv4(),  //Unique ID
-					stock_id,
-					wallet_tx_id: uuidv4(),
-					order_status: "COMPLETED",
-					parent_stock_tx_id: buyTransaction.parent_stock_tx_id,  
-					is_buy: false,  //Seller transaction 
-					order_type: order_type,
-					stock_price: matchPrice,
-					quantity: matchQuantity,
-					time_stamp: new Date(),
-					buyer_id: user_id,  //Keep everything the same
-					seller_id: sellOrder.user_id,
-				});
-				
-				await sellTransaction.save();
-				
-				const sellerWalletTransaction = new Wallet({
+
+                await buyTransaction.save();
+                allTransactions.push(buyTransaction);
+
+                // Create SELL Transaction
+                const sellTransaction = new Transaction({
+                    stock_tx_id: uuidv4(),
+                    stock_id,
+                    wallet_tx_id: uuidv4(),
+                    order_status: "COMPLETED",
+                    parent_stock_tx_id: buyTransaction.parent_stock_tx_id,
+                    is_buy: false,
+                    order_type,
+                    stock_price: matchPrice,
+                    quantity: matchQuantity,
+                    time_stamp: new Date(),
+                    buyer_id: user_id,
+                    seller_id: sellOrder.user_id,
+                });
+
+                await sellTransaction.save();
+
+                const sellerWalletTransaction = new Wallet({
                     wallet_tx_id: sellTransaction.wallet_tx_id,
-                    user_id: buyTransaction.seller_id, 
+                    user_id: buyTransaction.seller_id,
                     stock_tx_id: sellTransaction.stock_tx_id,
-                    is_debit: false, // Credit transaction for the seller
+                    is_debit: false,
                     amount: matchQuantity * matchPrice,
                     timestamp: new Date(),
-				});
+                });
 
-				await sellerWalletTransaction.save(); // Ensure transaction is saved
-				console.log(`Wallet Transaction Logged (Credit) for seller:`, sellerWalletTransaction);
-				
-				//Log Debit Transaction in Wallet
-				const walletTransaction = new Wallet({
-						wallet_tx_id: buyTransaction.wallet_tx_id,
-						user_id: current_user_id,
-						stock_tx_id: buyTransaction.stock_tx_id,
-						is_debit: true, // Debit transaction for buyer
-						amount: matchQuantity * matchPrice,
-						timestamp: new Date(),
-					});
+                await sellerWalletTransaction.save();
+                console.log(`Wallet Transaction Logged (Credit) for seller:`, sellerWalletTransaction);
 
-				await walletTransaction.save();
-				console.log(`Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
-				
-                //Seller Updates
+                // Log Debit Transaction in Wallet
+                const walletTransaction = new Wallet({
+                    wallet_tx_id: buyTransaction.wallet_tx_id,
+                    user_id: current_user_id,
+                    stock_tx_id: buyTransaction.stock_tx_id,
+                    is_debit: true,
+                    amount: matchQuantity * matchPrice,
+                    timestamp: new Date(),
+                });
+
+                await walletTransaction.save();
+                console.log(`Wallet Transaction Logged (Debit) for buyer:`, walletTransaction);
+
+                // Seller Updates
                 const sellerUser = await User.findById(sellOrder.user_id);
                 if (sellerUser) {
                     sellerUser.wallet_balance += matchQuantity * matchPrice;
                     await sellerUser.save();
                 }
 
-                //Sell Order Updates
-                const originalSellTx = await Transaction.findOne({ stock_tx_id: sellOrder.id });
-                if (originalSellTx) {
-                    if (matchQuantity === originalSellTx.quantity) {
-                        originalSellTx.order_status = "COMPLETED";
-                    } else {
-                        originalSellTx.order_status = "PARTIALLY_COMPLETED";
-                    }
-                    await originalSellTx.save();
-                }
-
+                // Sell Order Updates
                 sellOrder.quantity -= matchQuantity;
                 if (sellOrder.quantity === 0) {
                     console.log(`Removing sell order ${sellOrder.id} as quantity is now zero`);
-                    engine.orderBook.sellOrders = engine.orderBook.sellOrders.filter(order => order.id !== sellOrder.id);
+                    await engine.cancelOrder(sellOrder.id, sellOrder.user_id, false);
                 }
 
                 remainingQuantity -= matchQuantity;
@@ -234,7 +218,7 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
                 buyerPortfolio.quantity_owned += quantity;
             }
             await buyerPortfolio.save();
-            console.log(`Buyer's Portfolio Updated: ${quantity} stocks added.`);			
+            console.log(`Buyer's Portfolio Updated: ${quantity} stocks added.`);
         }
 
         return res.json({ success: true, data: allTransactions });
