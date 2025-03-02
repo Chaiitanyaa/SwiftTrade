@@ -3,9 +3,14 @@ const express = require("express");
 const authMiddleware = require("../middleware/authMiddleware");
 const axios = require("axios");
 const router = express.Router();
+const Transaction = require("../models/Transaction");
+const { v4: uuidv4 } = require("uuid");
+const Stock = require("../models/Stock"); 
+const Wallet = require("../models/Wallet");
+const UserPortfolio = require("../models/UserPortfolio");
+const User = require("../models/User");
 
-
-const MatchingEngine = process.env.MatchingEngine || "http://matching_engine_service:3006";
+const MatchingEngine = process.env.MATCHING_ENGINE_URL || "http://matching_engine:3006";
 
 const engine = {
     placeOrder: async (order) => {
@@ -26,16 +31,8 @@ const engine = {
             throw error;
         }
     }
-};
+};  // Now the engine object is properly closed.
 
-
-
-const Transaction = require("../models/Transaction");
-const { v4: uuidv4 } = require("uuid");
-const Stock = require("../models/Stock"); 
-const Wallet = require("../models/Wallet");
-const UserPortfolio = require("../models/UserPortfolio");
-const User = require("../models/User");
 
 
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {

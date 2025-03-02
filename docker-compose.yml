@@ -28,7 +28,7 @@ services:
       - shared_matching_data:/app/matching-data
     environment:
       - NODE_ENV=production
-      - MATCHING_ENGINE_URL=http://matching_engine_service:3006
+      - MATCHING_ENGINE_URL=http://matching-engine:3006
       - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
 
   engine:
@@ -46,7 +46,7 @@ services:
       - shared_matching_data:/app/matching-data
     environment:
       - NODE_ENV=production
-      - MATCHING_ENGINE_URL=http://matching_engine_service:3006
+      - MATCHING_ENGINE_URL=http://matching-engine:3006
       - MONGO_URI=mongodb://trading_mongo:27017/tradingDB
 
   setup:
