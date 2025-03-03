@@ -1,47 +1,48 @@
 const express = require("express");
-const { getChannel } = require("../utils/rabbitmq"); // ✅ RabbitMQ Connection
-const User = require("../models/User"); // ✅ MongoDB Model
+const { getChannel } = require("../utils/rabbitmq");
+const User = require("../models/User");
+const PendingRequest = require("../models/PendingRequest");
 const router = express.Router();
 
-// Function to wait until user registration completes
-const waitForUserCreation = async (user_name) => {
+// Function to wait for request completion
+const waitForRequestCompletion = async (user_name) => {
     let attempts = 0;
-    while (attempts < 10) { // ✅ Check for 10 seconds
-        const user = await User.findOne({ user_name });
-        if (user) return user; // ✅ Return the created user
+    while (attempts < 15) { // ✅ Check for 15 seconds
+        const request = await PendingRequest.findOne({ user_name });
+        if (request && request.status === "completed") return true; // ✅ Successfully processed
+        if (request && request.status === "failed") return false; // ❌ Failed processing
         await new Promise(resolve => setTimeout(resolve, 1000)); // ✅ Wait 1 sec
         attempts++;
     }
-    return null; // ❌ User not found after 10 attempts
+    return false; // ❌ Timed out
 };
 
-// Function to wait until login attempt succeeds
-const waitForLoginToken = async (user_name) => {
-    let attempts = 0;
-    while (attempts < 10) {
-        const user = await User.findOne({ user_name }).select("jwt_token");
-        if (user && user.jwt_token) {
-            return user.jwt_token; // ✅ Return token if available
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000)); // ✅ Wait 1 sec
-        attempts++;
-    }
-    return null; // ❌ Login failed after 10 attempts
-};
-
-// Register user (Sends to RabbitMQ, then checks DB)
+// Register user
 router.post("/register", async (req, res) => {
     try {
         const { user_name } = req.body;
         const channel = getChannel();
         if (!channel) return res.status(500).json({ success: false, error: "RabbitMQ not connected" });
 
+        // ✅ Check if user already exists before sending to RabbitMQ
+        const existingUser = await User.findOne({ user_name });
+        if (existingUser) {
+            return res.status(400).json({ success: false, error: "User already exists" });
+        }
+
+        // ✅ Mark request as pending in MongoDB
+        await PendingRequest.findOneAndUpdate(
+            { user_name },
+            { status: "pending" },
+            { upsert: true }
+        );
+
         await channel.sendToQueue("user_registration", Buffer.from(JSON.stringify(req.body)));
 
-        // ✅ Wait until user is created in DB
-        const user = await waitForUserCreation(user_name);
-        if (!user) {
-            return res.status(400).json({ success: false, error: "User already exists" });
+        // ✅ Wait until request is marked as "completed" or "failed"
+        const success = await waitForRequestCompletion(user_name);
+        if (!success) {
+            return res.status(500).json({ success: false, error: "Registration failed" });
         }
 
         return res.status(201).json({ success: true, data: null });
@@ -52,22 +53,29 @@ router.post("/register", async (req, res) => {
     }
 });
 
-// Login user (Sends to RabbitMQ, then checks DB)
+// Login user
 router.post("/login", async (req, res) => {
     try {
         const { user_name } = req.body;
         const channel = getChannel();
         if (!channel) return res.status(500).json({ success: false, error: "RabbitMQ not connected" });
 
+        await PendingRequest.findOneAndUpdate(
+            { user_name },
+            { status: "pending" },
+            { upsert: true }
+        );
+
         await channel.sendToQueue("user_login", Buffer.from(JSON.stringify(req.body)));
 
-        // ✅ Wait until user gets a JWT token
-        const token = await waitForLoginToken(user_name);
-        if (!token) {
+        // ✅ Wait until login is completed
+        const success = await waitForRequestCompletion(user_name);
+        if (!success) {
             return res.status(400).json({ success: false, error: "Invalid credentials" });
         }
 
-        return res.status(200).json({ success: true, data: { token } });
+        const user = await User.findOne({ user_name }).select("jwt_token");
+        return res.status(200).json({ success: true, data: { token: user.jwt_token } }); // ✅ Correct token format
 
     } catch (error) {
         console.error("❌ Login Error:", error);
