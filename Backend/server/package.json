@@ -21,7 +21,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.7",
     "redis": "^4.7.0",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+	"helmet": "^7.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.9"

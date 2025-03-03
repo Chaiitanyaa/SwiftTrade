@@ -1,12 +1,12 @@
 const app = require("./app");
-const connectDB = require("./config/db");
+const connectDB = require("./config/db"); // ✅ Ensure this path matches your folder structure
 
 require("dotenv").config(); // Load environment variables
 
-connectDB();
+connectDB(); // ✅ Call the function to connect MongoDB
 
-const PORT = process.env.PORT || 3001; // Changed from default 5000 to 3001
+const PORT = process.env.PORT || 3001;
 
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
 });

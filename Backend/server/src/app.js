@@ -28,4 +28,20 @@ app.use("/engine", transactionsRoute);
 
 app.use("/setup", stocksRoute);
 
+
+const helmet = require("helmet");
+
+
+
+// Middleware
+app.use(express.json({ limit: "10mb" }));  // Increase request body limit
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cors());
+app.use(helmet());  // Adds security headers
+
+
+
+
+
+
 module.exports = app;

@@ -1,16 +1,18 @@
 const mongoose = require("mongoose");
-require("dotenv").config(); // Load environment variables from .env
 
 const connectDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI || "mongodb://mongo:27017/swifttrade", {
+        await mongoose.connect(process.env.MONGO_URI || "mongodb://mongo:27017/tradingDB", {
             useNewUrlParser: true,
-            useUnifiedTopology: true
+            useUnifiedTopology: true,
+            maxPoolSize: 50,
+            socketTimeoutMS: 45000,
+            serverSelectionTimeoutMS: 5000,
         });
-        console.log("MongoDB connected successfully");
-    } catch (error) {
-        console.error("MongoDB connection error:", error);
-        process.exit(1); // Exit process with failure
+        console.log("✅ MongoDB Connected");
+    } catch (err) {
+        console.error("❌ MongoDB Connection Error:", err.message);
+        setTimeout(connectDB, 5000); // Retry every 5 seconds
     }
 };
 
