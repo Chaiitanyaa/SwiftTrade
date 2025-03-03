@@ -63,7 +63,7 @@ const connectRabbitMQ = async () => {
                     return;
                 }
 
-                user.jwt_token = jwt.sign({ id: user._id }, "secret", { expiresIn: "1h" });
+                user.jwt_token = jwt.sign({ id: user._id }, "your_secret", { expiresIn: "1h" });
                 await user.save();
                 await PendingRequest.findOneAndUpdate({ user_name }, { status: "completed" });
 
