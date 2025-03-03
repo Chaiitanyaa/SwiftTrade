@@ -1,33 +1,13 @@
 version: '3.8'
 
 services:
-  backend_1:
+  # Backend service, now using a single definition with replicas instead of multiple hardcoded ones
+  backend:
     build:
       context: ./backend/server
       dockerfile: Dockerfile
-    container_name: trading_backend_1
-    restart: always
-    expose:
-      - "3001"
-    depends_on:
-      - mongo
-      - redis
-      - rabbitmq
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/tradingDB
-      - PORT=3001
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://rabbitmq
-      
-    networks:
-      - trading_network
-
-  backend_2:
-    build:
-      context: ./backend/server
-      dockerfile: Dockerfile
-    container_name: trading_backend_2
+    deploy:
+      replicas: 4  # Runs 4 backend instances
     restart: always
     expose:
       - "3001"
@@ -44,54 +24,13 @@ services:
     networks:
       - trading_network
 
-  backend_3:
-    build:
-      context: ./backend/server
-      dockerfile: Dockerfile
-    container_name: trading_backend_3
-    restart: always
-    expose:
-      - "3001"
-    depends_on:
-      - mongo
-      - redis
-      - rabbitmq
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/tradingDB
-      - PORT=3001
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://rabbitmq
-    networks:
-      - trading_network
-
-  backend_4:
-    build:
-      context: ./backend/server
-      dockerfile: Dockerfile
-    container_name: trading_backend_4
-    restart: always
-    expose:
-      - "3001"
-    depends_on:
-      - mongo
-      - redis
-      - rabbitmq
-    environment:
-      - MONGO_URI=mongodb://mongo:27017/tradingDB
-      - PORT=3001
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - RABBITMQ_URL=amqp://rabbitmq
-    networks:
-      - trading_network
-
-  # Worker service that processes RabbitMQ messages for user registration & login
+  # Worker service for processing RabbitMQ messages
   worker:
     build:
       context: ./backend/server
       dockerfile: Dockerfile
-    container_name: trading_worker
+    deploy:
+      replicas: 5  # Runs 5 worker instances to handle concurrent requests
     restart: always
     depends_on:
       - rabbitmq
@@ -134,7 +73,7 @@ services:
     restart: always
     ports:
       - "5672:5672"  # Main RabbitMQ connection
-      - "15672:15672" # Management UI
+      - "15672:15672" # RabbitMQ Management UI
     networks:
       - trading_network
 
@@ -144,10 +83,7 @@ services:
     container_name: trading_nginx
     restart: always
     depends_on:
-      - backend_1
-      - backend_2
-      - backend_3
-      - backend_4
+      - backend
     ports:
       - "1900:1900"
     volumes:
