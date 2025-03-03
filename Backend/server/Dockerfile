@@ -8,6 +8,7 @@ COPY package*.json ./
 
 # Install dependencies
 RUN npm install
+RUN npm install amqplib
 
 # Create the src directory inside the container (if not already created)
 RUN mkdir -p src

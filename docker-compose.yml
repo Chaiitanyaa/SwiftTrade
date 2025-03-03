@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   backend_1:
     build:
@@ -10,11 +12,13 @@ services:
     depends_on:
       - mongo
       - redis
+      - rabbitmq
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
       - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
     networks:
       - trading_network
 
@@ -29,11 +33,13 @@ services:
     depends_on:
       - mongo
       - redis
+      - rabbitmq
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
       - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
     networks:
       - trading_network
 
@@ -48,11 +54,13 @@ services:
     depends_on:
       - mongo
       - redis
+      - rabbitmq
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
       - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
     networks:
       - trading_network
 
@@ -67,14 +75,34 @@ services:
     depends_on:
       - mongo
       - redis
+      - rabbitmq
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
       - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - RABBITMQ_URL=amqp://rabbitmq
     networks:
       - trading_network
 
+  # Worker service that processes RabbitMQ messages for user registration & login
+  worker:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_worker
+    restart: always
+    depends_on:
+      - rabbitmq
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - RABBITMQ_URL=amqp://rabbitmq
+    networks:
+      - trading_network
+    command: ["node", "src/workers/userWorker.js"]  # Runs the worker service
+
+  # MongoDB service for storing user and trading data
   mongo:
     image: mongo:latest
     container_name: trading_mongo
@@ -86,6 +114,7 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  # Redis service for caching and session management
   redis:
     image: redis:latest
     container_name: trading_redis
@@ -97,6 +126,18 @@ services:
     volumes:
       - redis_data:/data
 
+  # RabbitMQ message broker for handling async tasks like user registration & login
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: trading_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"  # Main RabbitMQ connection
+      - "15672:15672" # Management UI
+    networks:
+      - trading_network
+
+  # Nginx as a reverse proxy to distribute traffic to backend instances
   nginx:
     image: nginx:latest
     container_name: trading_nginx
