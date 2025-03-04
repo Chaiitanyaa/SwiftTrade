@@ -5,6 +5,14 @@ const User = require("../models/User");
 const redisClient = require("../config/redis");
 const router = express.Router();
 
+
+// Ensure user_name is indexed in MongoDB
+(async () => {
+    await User.createIndexes({ user_name: 1 }, { unique: true });
+    console.log("✅ User Index Created");
+})();
+
+
 // Register a new user
 router.post("/register", async (req, res) => {
     try {
@@ -22,7 +30,7 @@ router.post("/register", async (req, res) => {
             return res.status(400).json({ success: false, error: "User already exists (cached)" });
         }
 
-        const existingUser = await User.findOne({ user_name }).maxTimeMS(3000);
+        const existingUser = await User.findOne({ user_name }).maxTimeMS(10000); // ✅ Increased from 3000 to 10000
         if (existingUser) {
             try {
                 await redisClient.set(`user:${user_name}`, "exists", "EX", 300);
@@ -43,6 +51,7 @@ router.post("/register", async (req, res) => {
         return res.status(500).json({ success: false, error: "Server error" });
     }
 });
+
 
 // Login user (Ensure it's optimized for multi-threading)
 router.post("/login", async (req, res) => {

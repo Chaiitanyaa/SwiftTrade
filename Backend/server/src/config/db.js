@@ -5,9 +5,9 @@ const connectDB = async () => {
         await mongoose.connect(process.env.MONGO_URI || "mongodb://mongo:27017/tradingDB", {
             useNewUrlParser: true,
             useUnifiedTopology: true,
-            maxPoolSize: 50,
-            socketTimeoutMS: 45000,
-            serverSelectionTimeoutMS: 5000,
+            maxPoolSize: 200,
+            socketTimeoutMS: 60000,
+            serverSelectionTimeoutMS: 10000,
         });
         console.log("✅ MongoDB Connected");
     } catch (err) {
