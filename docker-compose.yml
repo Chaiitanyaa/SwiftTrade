@@ -1,4 +1,21 @@
 services:
+    
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    container_name: trading_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"  # ✅ RabbitMQ Connection
+      - "15672:15672" # ✅ RabbitMQ Web UI
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9155
+    command: ["rabbitmq-server", "--set_policy", "prefetch_policy", ".*", "{\"prefetch_count\":50}", "--apply-to", "queues"]
+    networks:
+      - trading_network
+
+    
   backend_1:
     build:
       context: ./backend/server
@@ -74,6 +91,239 @@ services:
       - REDIS_PORT=6379
     networks:
       - trading_network
+      
+  
+
+  backend_5:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_5
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_6:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_6
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_7:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_7
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_8:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_8
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network  
+
+
+  backend_9:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_9
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_10:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_10
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_11:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_11
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_12:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_12
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+      
+  
+
+  backend_13:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_13
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_14:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_14
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_15:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_15
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
+
+  backend_16:
+    build:
+      context: ./backend/server
+      dockerfile: Dockerfile
+    container_name: trading_backend_16
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network    
 
   mongo:
     image: mongo:latest
