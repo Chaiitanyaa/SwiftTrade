@@ -2,9 +2,9 @@ const redis = require("redis");
 
 const client = redis.createClient({
   socket: {
-    host: process.env.REDIS_HOST || "redis", // Use 'redis' inside Docker
+    host: process.env.REDIS_HOST || "redis",
     port: process.env.REDIS_PORT || 6379,
-    reconnectStrategy: (retries) => Math.min(retries * 50, 2000) // Exponential retry
+    reconnectStrategy: (retries) => Math.min(retries * 100, 5000) // 🚀 Better exponential backoff
   },
 });
 
@@ -13,7 +13,7 @@ client.on("error", (err) => console.error("❌ Redis Error:", err.message));
 
 (async () => {
   try {
-    await client.connect(); // Required for Redis v4+
+    await client.connect();
     console.log("✅ Redis Connection Established");
   } catch (error) {
     console.error("❌ Redis Connection Failed:", error.message);

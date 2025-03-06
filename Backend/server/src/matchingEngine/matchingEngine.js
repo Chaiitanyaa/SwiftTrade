@@ -27,7 +27,7 @@ class MatchingEngine {
             this.orderBook.buyOrders = buyOrders ? JSON.parse(buyOrders) : [];
             this.orderBook.sellOrders = sellOrders ? JSON.parse(sellOrders) : [];
 
-            console.log("📌 Order book loaded from Redis.");
+            
         } catch (error) {
             console.error("❌ Error loading order book from Redis:", error);
         }
@@ -38,7 +38,7 @@ class MatchingEngine {
         try {
             await redisClient.set("order_book:buyOrders", JSON.stringify(this.orderBook.buyOrders));
             await redisClient.set("order_book:sellOrders", JSON.stringify(this.orderBook.sellOrders));
-            console.log("✅ Order book saved to Redis.");
+            
         } catch (error) {
             console.error("❌ Error saving order book to Redis:", error);
         }
@@ -46,7 +46,7 @@ class MatchingEngine {
 
     // 🔹 Place an order and sync with Redis
     async placeOrder(order) {
-        console.log(`⚡️ Placing order: ${JSON.stringify(order)}`);
+        
 
         if (order.is_buy) {
             let bestSell = this.orderBook.getBestSell();
@@ -91,7 +91,7 @@ class MatchingEngine {
 
         if (order.quantity > 0) {
             this.orderBook.addOrder(order);
-            console.log(`Order added to order book:`, order);
+            
 
             // 🔹 Remove stock from UserPortfolio
             try {
@@ -99,7 +99,7 @@ class MatchingEngine {
                 if (portfolio) {
                     portfolio.quantity_owned = Math.max(0, portfolio.quantity_owned - order.quantity);
                     await portfolio.save();
-                    console.log(`Updated UserPortfolio: Removed ${order.quantity} stocks for user ${order.user_id}`);
+                    
                 } else {
                     console.warn(`UserPortfolio not found for user ${order.user_id} and stock ${order.stock_id}`);
                 }
@@ -132,7 +132,7 @@ class MatchingEngine {
             return { status: "Error", message: "Order not found or already executed" };
         }
 
-        console.log(`Order cancelled:`, order);
+        
 
         // 🔹 Restore stocks to UserPortfolio
         if (!isBuy) {
@@ -141,9 +141,9 @@ class MatchingEngine {
                 if (portfolio) {
                     portfolio.quantity_owned += order.quantity;
                     await portfolio.save();
-                    console.log(`Restored ${order.quantity} stocks to user ${userId} after cancellation`);
+                    
                 } else {
-                    console.warn(`No UserPortfolio found for user ${userId}. Creating new entry.`);
+                    
                     const newPortfolio = new UserPortfolio({
                         userid: userId,
                         stock_id: order.stock_id,
@@ -178,7 +178,7 @@ class MatchingEngine {
         redisSubscriber.on("message", async (channel, message) => {
             if (channel === "order_update") {
                 const order = JSON.parse(message);
-                console.log("📡 Received order update:", order);
+                
 
                 // Reload order book when any order is placed/canceled
                 await this.loadOrderBook();
