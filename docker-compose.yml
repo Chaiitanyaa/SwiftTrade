@@ -5,7 +5,7 @@ services:
     
   backend:
       build:
-        context: ./backend/server
+        context: ./Backend/server
         dockerfile: Dockerfile
       deploy:
         replicas: 7 # Define how many backend instances to spawn
