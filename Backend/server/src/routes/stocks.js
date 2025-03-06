@@ -13,10 +13,10 @@ router.get("/", async (req, res) => {
     try {
         client.get("all_stocks", async (err, stocks) => {
             if (stocks) {
-                console.log("📌 Fetching Stocks from Cache");
+                
                 return res.json({ success: true, data: JSON.parse(stocks) });
             } else {
-                console.log("📌 Fetching Stocks from Database");
+                
                 const stockData = await Stock.find();
                 client.setex("all_stocks", 3600, JSON.stringify(stockData)); // Cache for 1 hour
                 return res.json({ success: true, data: stockData });

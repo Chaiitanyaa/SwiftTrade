@@ -25,34 +25,63 @@ router.post("/", async (req, res) => {
     }
 });
  
-// Get user's stock portfolio
+// Ensure indexes for fast lookup
+async function ensureIndexes() {
+    try {
+        await UserPortfolio.collection.createIndex({ userid: 1, stock_id: 1 });
+        await Stock.collection.createIndex({ stock_id: 1 });
+        console.log("✅ Indexes ensured for UserPortfolio and Stock collections.");
+    } catch (error) {
+        console.error("❌ Error creating indexes:", error);
+    }
+}
+ensureIndexes();
+
 router.get("/getStockPortfolio", authMiddleware, async (req, res) => {
     try {
         const user_id = req.user.id;
-        const portfolio = await UserPortfolio.find({ userid: user_id, quantity_owned: { $gt: 0 } }); // 🔹 Exclude stocks with quantity 0
+        console.log(`📥 Fetching stock portfolio for user: ${user_id}`);
 
-        if (!portfolio || portfolio.length === 0) {
+        // 🔹 Step 1: Get all user's stocks, ensuring **oldest stocks appear first**
+        const portfolio = await UserPortfolio.find(
+            { userid: user_id, quantity_owned: { $gt: 0 } },
+            { stock_id: 1, quantity_owned: 1, _id: 0 }
+        )
+        .sort({ _id: 1 }) // Forces **bottom-up reading (oldest first)**
+        .lean();
+
+        if (!portfolio.length) {
+            console.log("⚠️ No stocks found in portfolio.");
             return res.json({ success: true, data: [] });
         }
 
-        // 🔹 Fetch stock details manually since `.populate()` doesn't work on Strings
-        const stockPortfolio = await Promise.all(
-            portfolio.map(async (entry) => {
-                const stock = await Stock.findOne({ stock_id: entry.stock_id });
-                return stock
-                    ? {
-                        stock_id: entry.stock_id,
-                        stock_name: stock.stock_name,
-                        quantity_owned: entry.quantity_owned,
-                        updated_at: new Date().toISOString(),
-                    }
-                    : null;
-            })
-        );
+        // Extract stock IDs for batch lookup
+        const stockIds = portfolio.map(stock => stock.stock_id);
 
-        res.json({ success: true, data: stockPortfolio.filter((item) => item !== null) });
+        // 🔹 Step 2: Fetch stock names in **one** DB call
+        const stocks = await Stock.find(
+            { stock_id: { $in: stockIds } },
+            { stock_id: 1, stock_name: 1, _id: 0 }
+        ).lean();
+
+        // Convert stock data into a **Map** for fast lookups
+        const stockMap = new Map(stocks.map(stock => [stock.stock_id, stock.stock_name]));
+
+        // 🔹 Step 3: Merge stock data with portfolio
+        const formattedPortfolio = portfolio.map(stock => ({
+            stock_id: stock.stock_id,
+            stock_name: stockMap.get(stock.stock_id) || "Unknown",
+            quantity_owned: stock.quantity_owned,
+            updated_at: new Date().toISOString()
+        }));
+
+        console.log(`✅ Stock portfolio returned with ${formattedPortfolio.length} entries.`);
+        
+        return res.json({ success: true, data: formattedPortfolio });
+
     } catch (err) {
-        res.status(500).json({ success: false, data: { error: err.message } });
+        console.error("❌ Error fetching stock portfolio:", err);
+        return res.status(500).json({ success: false, data: { error: err.message } });
     }
 });
 

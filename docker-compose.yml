@@ -8,7 +8,7 @@ services:
         context: ./backend/server
         dockerfile: Dockerfile
       deploy:
-        replicas: 10  # Define how many backend instances to spawn
+        replicas: 7 # Define how many backend instances to spawn
       restart: always
       expose:
         - "3001"
@@ -22,6 +22,7 @@ services:
         - REDIS_PORT=6379
       networks:
         - trading_network
+      
 
 
   
