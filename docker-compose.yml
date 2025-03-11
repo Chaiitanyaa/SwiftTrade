@@ -8,7 +8,7 @@ services:
         context: ./Backend/server
         dockerfile: Dockerfile
       deploy:
-        replicas: 7 # Define how many backend instances to spawn
+        replicas: 10 # Define how many backend instances to spawn
       restart: always
       expose:
         - "3001"
