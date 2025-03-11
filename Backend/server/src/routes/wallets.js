@@ -4,8 +4,6 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User");
 
-
-
 router.post("/addMoneyToWallet", authMiddleware, async (req, res) => {
     try {
         const { amount } = req.body;
@@ -57,11 +55,6 @@ router.get("/getWalletBalance", authMiddleware, async (req, res) => {
     }
 });
 
- 
-    
-
-
-
 router.get("/getWalletTransactions", authMiddleware, async (req, res) => {
     try {
         const user_id = req.user.id; // Extract user ID from JWT
@@ -95,12 +88,5 @@ router.get("/getWalletTransactions", authMiddleware, async (req, res) => {
         return res.status(500).json({ success: false, data: { error: error.message } });
     }
 });
-
-
-
-
-
-   
-
 
 module.exports = router;

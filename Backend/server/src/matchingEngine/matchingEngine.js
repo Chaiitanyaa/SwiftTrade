@@ -18,7 +18,7 @@ class MatchingEngine {
         this.listenForUpdates();
     }
 
-    // 🔹 Load order book from Redis
+    //Load order book from Redis
     async loadOrderBook() {
         try {
             const buyOrders = await redisClient.get("order_book:buyOrders");
@@ -29,22 +29,22 @@ class MatchingEngine {
 
             
         } catch (error) {
-            console.error("❌ Error loading order book from Redis:", error);
+            console.error("Error loading order book from Redis:", error);
         }
     }
 
-    // 🔹 Save order book to Redis
+    //Save order book to Redis
     async saveOrderBook() {
         try {
             await redisClient.set("order_book:buyOrders", JSON.stringify(this.orderBook.buyOrders));
             await redisClient.set("order_book:sellOrders", JSON.stringify(this.orderBook.sellOrders));
             
         } catch (error) {
-            console.error("❌ Error saving order book to Redis:", error);
+            console.error("Error saving order book to Redis:", error);
         }
     }
 
-    // 🔹 Place an order and sync with Redis
+    //Place an order and sync with Redis
     async placeOrder(order) {
         
 
@@ -93,7 +93,7 @@ class MatchingEngine {
             this.orderBook.addOrder(order);
             
 
-            // 🔹 Remove stock from UserPortfolio
+            //Remove stock from UserPortfolio
             try {
                 const portfolio = await UserPortfolio.findOne({ userid: order.user_id, stock_id: order.stock_id });
                 if (portfolio) {
@@ -108,16 +108,16 @@ class MatchingEngine {
             }
         }
 
-        // 🔹 Save updated order book to Redis
+        //Save updated order book to Redis
         await this.saveOrderBook();
 
-        // 🔹 Publish update to notify all instances
+        //Publish update to notify all instances
         await redisClient.publish("order_update", JSON.stringify(order));
 
         return { status: "Order placed", tradeHistory: this.tradeHistory };
     }
 
-    // 🔹 Cancel an order and sync with Redis
+    //Cancel an order and sync with Redis
     async cancelOrder(orderId, userId, isBuy) {
         let order;
         if (isBuy) {
@@ -134,7 +134,7 @@ class MatchingEngine {
 
         
 
-        // 🔹 Restore stocks to UserPortfolio
+        //Restore stocks to UserPortfolio
         if (!isBuy) {
             try {
                 const portfolio = await UserPortfolio.findOne({ userid: userId, stock_id: order.stock_id });
@@ -156,22 +156,22 @@ class MatchingEngine {
             }
         }
 
-        // 🔹 Save updated order book to Redis
+        //Save updated order book to Redis
         await this.saveOrderBook();
 
-        // 🔹 Publish update to notify all instances
+        //Publish update to notify all instances
         await redisClient.publish("order_update", JSON.stringify({ cancel: true, orderId }));
 
         return { status: "Order cancelled", order };
     }
 
-    // 🔹 Listen for order updates from Redis
+    //Listen for order updates from Redis
     async listenForUpdates() {
         redisSubscriber.subscribe("order_update", (err, count) => {
             if (err) {
-                console.error("❌ Failed to subscribe to order updates:", err);
+                console.error("Failed to subscribe to order updates:", err);
             } else {
-                console.log(`📡 Subscribed to order updates (${count} channels).`);
+                console.log(`Subscribed to order updates (${count} channels).`);
             }
         });
 
@@ -186,7 +186,7 @@ class MatchingEngine {
         });
     }
 
-    // 🔹 Return full order book
+    //Return full order book
     getOrderBook() {
         return this.orderBook;
     }

@@ -6,8 +6,6 @@ const authenticateToken = require("../middleware/authMiddleware");
 const { v4: uuidv4 } = require("uuid");
 const client = require("../config/redis"); // Import Redis client
 
-
-
 // Fetch all stocks
 router.get("/", async (req, res) => {
     try {

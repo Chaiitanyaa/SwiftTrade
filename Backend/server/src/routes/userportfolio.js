@@ -32,7 +32,7 @@ async function ensureIndexes() {
         await Stock.collection.createIndex({ stock_id: 1 });
         console.log("✅ Indexes ensured for UserPortfolio and Stock collections.");
     } catch (error) {
-        console.error("❌ Error creating indexes:", error);
+        console.error("Error creating indexes:", error);
     }
 }
 ensureIndexes();
@@ -40,7 +40,7 @@ ensureIndexes();
 router.get("/getStockPortfolio", authMiddleware, async (req, res) => {
     try {
         const user_id = req.user.id;
-        console.log(`📥 Fetching stock portfolio for user: ${user_id}`);
+        console.log(`Fetching stock portfolio for user: ${user_id}`);
 
         // 🔹 Step 1: Get all user's stocks, ensuring **oldest stocks appear first**
         const portfolio = await UserPortfolio.find(
@@ -51,7 +51,7 @@ router.get("/getStockPortfolio", authMiddleware, async (req, res) => {
         .lean();
 
         if (!portfolio.length) {
-            console.log("⚠️ No stocks found in portfolio.");
+            console.log("No stocks found in portfolio.");
             return res.json({ success: true, data: [] });
         }
 
@@ -75,7 +75,7 @@ router.get("/getStockPortfolio", authMiddleware, async (req, res) => {
             updated_at: new Date().toISOString()
         }));
 
-        console.log(`✅ Stock portfolio returned with ${formattedPortfolio.length} entries.`);
+        console.log(`Stock portfolio returned with ${formattedPortfolio.length} entries.`);
         
         return res.json({ success: true, data: formattedPortfolio });
 

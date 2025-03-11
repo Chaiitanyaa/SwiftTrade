@@ -18,7 +18,7 @@ router.post("/register", async (req, res) => {
     try {
         const { user_name, password, name } = req.body;
 
-        // 🚀 Step 1: Check Redis Cache (but don't rely on it)
+        //Step 1: Check Redis Cache (but don't rely on it)
         let isCached = false;
         try {
             const cachedUser = await redisClient.get(`user:${user_name}`);
@@ -31,7 +31,7 @@ router.post("/register", async (req, res) => {
             return res.status(400).json({ success: false, error: "User already exists (cached)" });
         }
 
-        // 🚀 Step 2: Atomic Insert Using `findOneAndUpdate`
+        //Step 2: Atomic Insert Using `findOneAndUpdate`
         const filter = { user_name };
         const update = { user_name, password, name };
         const options = { upsert: true, new: true, setDefaultsOnInsert: true };
@@ -42,7 +42,7 @@ router.post("/register", async (req, res) => {
             return res.status(400).json({ success: false, error: "User registration failed" });
         }
 
-        // 🚀 Step 3: Update Redis Cache Only AFTER Successful Insert
+        //Step 3: Update Redis Cache Only AFTER Successful Insert
         try {
             await redisClient.set(`user:${user_name}`, "exists", "EX", 300);
         } catch (redisError) {
@@ -56,10 +56,6 @@ router.post("/register", async (req, res) => {
         return res.status(500).json({ success: false, error: "Server error" });
     }
 });
-
-
-
-
 
 // Login user (Ensure it's optimized for multi-threading)
 router.post("/login", async (req, res) => {

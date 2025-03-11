@@ -42,10 +42,6 @@ router.post("/placeStockOrder", authMiddleware, async (req, res) => {
             
 
             const userPortfolio = await UserPortfolio.findOne({ userid: user_id, stock_id: stock_id.toString() });
-
-            
-            
-
             if (!userPortfolio || userPortfolio.quantity_owned < quantity) {
                 
                 return res.status(400).json({ success: false, data: { error: "Not enough stocks to sell" } });
