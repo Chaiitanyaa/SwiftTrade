@@ -1,31 +1,25 @@
 services:
-    
   
-
-    
   backend:
-      build:
-        context: ./Backend/server
-        dockerfile: Dockerfile
-      deploy:
-        replicas: 10 # Define how many backend instances to spawn
-      restart: always
-      expose:
-        - "3001"
-      depends_on:
-        - mongo
-        - redis
-      environment:
-        - MONGO_URI=mongodb://mongo:27017/tradingDB
-        - PORT=3001
-        - REDIS_HOST=redis
-        - REDIS_PORT=6379
-      networks:
-        - trading_network
-      
+    build:
+      context: ./Backend/server
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 10  # Spawn 10 backend instances for load balancing
+    restart: always
+    expose:
+      - "3001"
+    depends_on:
+      - mongo
+      - redis
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/tradingDB
+      - PORT=3001
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    networks:
+      - trading_network
 
-
-  
   mongo:
     image: mongo:latest
     container_name: trading_mongo
@@ -48,16 +42,17 @@ services:
     volumes:
       - redis_data:/data
 
-  nginx:
-    image: nginx:latest
-    container_name: trading_nginx
+  openresty:
+    image: openresty/openresty:alpine
+    container_name: trading_openresty
     restart: always
     depends_on:
       - backend
     ports:
       - "1900:1900"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+      - ./nginx/lua-scripts:/usr/local/openresty/nginx/lua-scripts:ro  # For Lua scripts
     networks:
       - trading_network
 
