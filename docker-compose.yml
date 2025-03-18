@@ -1,24 +1,62 @@
 services:
+  haproxy:
+    image: haproxy:latest
+    container_name: haproxy_lb
+    ports:
+      - "80:80"  # HAProxy listens on port 80
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks:
+      - trading_network
+    depends_on:
+      - nginx1
+      - nginx2
+
+  nginx1:
+    image: nginx:latest
+    container_name: nginx_1
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "1900:1900"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - trading_network
+
+  nginx2:
+    image: nginx:latest
+    container_name: nginx_2
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "1901:1901"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - trading_network
+
   backend:
     build:
       context: ./Backend/server
       dockerfile: Dockerfile
     deploy:
-      replicas: 10 # 10 backend instances
-      restart_policy:
-        condition: any
+      replicas: 10  # 10 backend instances
+    restart: always
     expose:
       - "3001"
-    networks:
-      - trading_network
+    depends_on:
+      - mongo
+      - redis
     environment:
       - MONGO_URI=mongodb://mongo:27017/tradingDB
       - PORT=3001
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-    depends_on:
-      - mongo
-      - redis
+    networks:
+      - trading_network
 
   mongo:
     image: mongo:latest
@@ -41,23 +79,6 @@ services:
       - trading_network
     volumes:
       - redis_data:/data
-
-  nginx:
-    image: nginx:latest
-    deploy:
-      replicas: 3 # 3 Nginx instances for load balancing
-      restart_policy:
-        condition: any
-      placement:
-        constraints: [node.role == worker] # Run on worker nodes
-    ports:
-      - "1900:1900" # Exposing the same port for all Nginx instances
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    networks:
-      - trading_network
-    depends_on:
-      - backend
 
 networks:
   trading_network:
