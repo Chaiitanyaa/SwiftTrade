@@ -14,7 +14,7 @@ const client = require("../config/redis");
 
 router.post("/placeStockOrder", authMiddleware, async (req, res) => {
     
-
+	
     const user_id = req.user.id;
     const current_user_id = user_id;
     let { stock_id, is_buy, order_type, quantity, price } = req.body;
