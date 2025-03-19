@@ -3,7 +3,7 @@ services:
     image: haproxy:latest
     container_name: haproxy_lb
     ports:
-      - "80:80"  # HAProxy listens on port 80
+      - "8080:8080"  # HAProxy listens on port 80
     volumes:
       - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     networks:
@@ -11,6 +11,8 @@ services:
     depends_on:
       - nginx1
       - nginx2
+      - nginx3
+      - nginx4
 
   nginx1:
     image: nginx:latest
@@ -33,6 +35,32 @@ services:
       - backend
     ports:
       - "1901:1901"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - trading_network
+
+  nginx3:
+    image: nginx:latest
+    container_name: nginx_3
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "1902:1902"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - trading_network
+
+  nginx4:
+    image: nginx:latest
+    container_name: nginx_4
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "1903:1903"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
